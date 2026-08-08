@@ -1,4 +1,5 @@
 const API = "http://localhost:8000";
+const WS_API = API.replace(/^http/, "ws");
 
 // Maps internal page ids -> actual HTML filenames
 const PAGE_FILES = {
@@ -603,6 +604,59 @@ async function resolveDomain(){
   } catch(e){ show("resolveOutput",{error:"Resolve failed.",detail:e.message}); }
 }
 
+// ─── LIVE BLOCKCHAIN/DOMAIN UPDATES (WebSocket) ─────────────
+// Instead of polling the backend on a timer, we keep one WebSocket connection
+// open and let the server push a message the instant a new block is mined
+// (domain register/update/transfer/freeze/...). Any open dashboard page then
+// refreshes just the pieces of UI it cares about.
+let chainSocket = null;
+let chainSocketRetryMs = 2000;
+
+const TX_TYPE_LABELS = {
+  register: "Domain registered",
+  update: "Domain IP updated",
+  transfer: "Ownership transferred",
+  admin_freeze: "Domain frozen",
+  admin_unfreeze: "Domain unfrozen",
+};
+
+function connectChainSocket(){
+  if(chainSocket && (chainSocket.readyState === WebSocket.OPEN || chainSocket.readyState === WebSocket.CONNECTING)) return;
+
+  try{
+    chainSocket = new WebSocket(WS_API + "/api/v1/ws/chain");
+  }catch(e){ return; }
+
+  chainSocket.onopen = () => { chainSocketRetryMs = 2000; };
+
+  chainSocket.onmessage = (event) => {
+    let payload;
+    try{ payload = JSON.parse(event.data); }catch(e){ return; }
+
+    if(document.getElementById("chainVisual") || document.getElementById("chainHeight") || document.getElementById("chainOutput")) loadChain();
+    if(document.getElementById("domainTable") || document.getElementById("domainCount")) loadDomains();
+    if(document.getElementById("myDomainTable") && typeof loadMyDomains === "function") loadMyDomains();
+    if(document.getElementById("globalAuditTable") && typeof loadGlobalAuditTrail === "function") loadGlobalAuditTrail();
+
+    if(payload && payload.tx_type){
+      const label = TX_TYPE_LABELS[payload.tx_type] || payload.tx_type;
+      notify(`Live: ${label} — ${payload.domain} (block #${payload.chain_height})`);
+    }
+  };
+
+  chainSocket.onclose = () => {
+    chainSocket = null;
+    // Auto-reconnect with a simple backoff, capped at 15s, so a restarted
+    // backend or a brief network blip doesn't permanently kill live updates.
+    setTimeout(connectChainSocket, chainSocketRetryMs);
+    chainSocketRetryMs = Math.min(chainSocketRetryMs * 1.5, 15000);
+  };
+
+  chainSocket.onerror = () => {
+    try{ chainSocket.close(); }catch(e){}
+  };
+}
+
 async function loadDomains(){
   try{
     const data    = await apiGet("/api/v1/domains");
@@ -1152,7 +1206,13 @@ function initPage(pageId){
   }
   if(document.getElementById("chainVisual") || document.getElementById("chainHeight") || document.getElementById("chainOutput")){
     loadChain();
-    if(pageId === "blockchain") setInterval(loadChain, 10000);
+  }
+  // Any page that shows live chain/domain data gets a push-updated WebSocket
+  // connection instead of (or in addition to) a one-time load.
+  if(document.getElementById("domainTable") || document.getElementById("domainCount") ||
+     document.getElementById("chainVisual") || document.getElementById("chainHeight") || document.getElementById("chainOutput") ||
+     document.getElementById("myDomainTable") || document.getElementById("globalAuditTable")){
+    connectChainSocket();
   }
   if(document.getElementById("alertFeed") || document.getElementById("monitorTotalEvents")){
     refreshMonitoring();

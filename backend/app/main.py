@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 from pathlib import Path
+import asyncio
 
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
@@ -15,10 +16,12 @@ from app.api.routes.signing import router as signing_router
 from app.api.routes.security import router as security_router
 from app.api.routes.payments import router as payments_router
 from app.api.routes.users import router as users_router
+from app.api.routes.ws import router as ws_router
 from app.blockchain.consensus_poa import PoAConsensus
 from app.blockchain.ledger import Ledger
 from app.cache.redis_client import RedisCacheClient
 from app.core.config import get_settings
+from app.core.ws_manager import set_main_loop
 from app.crypto.signature_service import SignatureService
 from app.resolver.dns_adapter import DnsAdapter
 from app.resolver.resolver_service import ResolverService
@@ -58,6 +61,7 @@ def init_ledger(app: FastAPI) -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    set_main_loop(asyncio.get_running_loop())
     init_ledger(app)
     yield
 
@@ -79,6 +83,7 @@ app.include_router(security_router, prefix=settings.api_prefix)
 app.include_router(payments_router, prefix=settings.api_prefix)
 app.include_router(admin_router, prefix=settings.api_prefix)
 app.include_router(users_router, prefix=settings.api_prefix)
+app.include_router(ws_router, prefix=settings.api_prefix)
 app.include_router(auth_router)
 app.mount("/ui/assets", StaticFiles(directory=FRONTEND_DIR / "assets"), name="ui-assets")
 

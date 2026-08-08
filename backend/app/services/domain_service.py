@@ -8,6 +8,7 @@ from app.blockchain.ledger import Ledger
 from app.blockchain.transaction import Transaction
 from app.crypto.signature_service import SignatureService
 from app.core.supabase_client import supabase
+from app.core.ws_manager import broadcast_chain_update
 
 class DomainError(Exception):
     pass
@@ -329,6 +330,19 @@ class DomainService:
 
         if self.cache_client is not None:
             self.cache_client.invalidate_domain(tx.domain)
+
+        # Push a live update to any connected dashboards (Blockchain Ledger, My
+        # Domains, admin overview, ...) so they refresh instantly instead of
+        # waiting on a polling interval.
+        broadcast_chain_update({
+            "tx_type": tx.tx_type,
+            "domain": tx.domain,
+            "tx_id": tx.tx_id,
+            "block_hash": block.hash,
+            "block_index": block.index,
+            "chain_height": self.ledger.get_chain_height(),
+            "validator": getattr(block, "validator", "validator-1"),
+        })
 
         return DomainMutationResult(
             tx_id=tx.tx_id,
