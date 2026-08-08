@@ -449,16 +449,61 @@ function notify(message){
 // ─── UTILS ─────────────────────────────────────────────────
 function show(id, data){ const el = document.getElementById(id); if(el) el.textContent = JSON.stringify(data, null, 2); }
 function hex(buffer){ return [...new Uint8Array(buffer)].map(b => b.toString(16).padStart(2,"0")).join(""); }
-function buildMessage(domain, ip){ return `{"domain":"${domain}","payload":{"ip":"${ip}"},"tx_type":"register"}`; }
+// Must match the backend's SignatureService.build_signing_message() EXACTLY:
+// json.dumps({"tx_type":tx_type,"domain":domain,"payload":payload}, sort_keys=True, separators=(",", ":"))
+// i.e. compact JSON with all object keys (recursively) sorted alphabetically.
+function canonicalJSON(obj){
+  if(Array.isArray(obj)) return "[" + obj.map(canonicalJSON).join(",") + "]";
+  if(obj !== null && typeof obj === "object"){
+    const keys = Object.keys(obj).sort();
+    return "{" + keys.map(k => JSON.stringify(k) + ":" + canonicalJSON(obj[k])).join(",") + "}";
+  }
+  return JSON.stringify(obj);
+}
+function buildMessage(txType, domain, payload){
+  return canonicalJSON({ tx_type: txType, domain, payload });
+}
 function shortText(t){ if(!t || t==="-") return "-"; return t.substring(0,22)+"..."; }
 
-async function signData(domain, ip){
-  const key    = await crypto.subtle.generateKey({name:"ECDSA",namedCurve:"P-256"},true,["sign","verify"]);
-  const pub    = await crypto.subtle.exportKey("raw", key.publicKey);
-  const pubHex = hex(pub).substring(2);
-  const msg    = new TextEncoder().encode(buildMessage(domain, ip));
-  const sig    = await crypto.subtle.sign({name:"ECDSA",hash:"SHA-256"}, key.privateKey, msg);
-  return { publicKey: pubHex, signature: hex(sig) };
+// ─── PERSISTENT SIGNING IDENTITY ───────────────────────────
+// A single ECDSA keypair is generated once per browser and reused for every
+// domain action (register / update IP / transfer). This is required because
+// the backend verifies that "update" and "transfer" requests are signed by
+// the SAME public key that was recorded as the domain's owner at
+// registration time - generating a fresh random keypair on every action (the
+// old behaviour) meant the public key never matched, and update/transfer
+// would always fail with "Only the current owner can update this domain."
+const KEYPAIR_STORAGE_KEY = "bdns_signing_keypair";
+
+async function getOrCreateKeypair(){
+  const stored = localStorage.getItem(KEYPAIR_STORAGE_KEY);
+  if(stored){
+    try{
+      const { privateJwk, publicKeyHex } = JSON.parse(stored);
+      const privateKey = await crypto.subtle.importKey(
+        "jwk", privateJwk, { name:"ECDSA", namedCurve:"P-256" }, true, ["sign"]
+      );
+      return { privateKey, publicKeyHex };
+    }catch(e){
+      // Stored keypair is corrupted/unreadable - fall through and generate a new one.
+      localStorage.removeItem(KEYPAIR_STORAGE_KEY);
+    }
+  }
+
+  const key = await crypto.subtle.generateKey({name:"ECDSA",namedCurve:"P-256"},true,["sign","verify"]);
+  const privateJwk  = await crypto.subtle.exportKey("jwk", key.privateKey);
+  const pubRaw      = await crypto.subtle.exportKey("raw", key.publicKey);
+  const publicKeyHex = hex(pubRaw).substring(2);
+
+  localStorage.setItem(KEYPAIR_STORAGE_KEY, JSON.stringify({ privateJwk, publicKeyHex }));
+  return { privateKey: key.privateKey, publicKeyHex };
+}
+
+async function signData(txType, domain, payload){
+  const { privateKey, publicKeyHex } = await getOrCreateKeypair();
+  const msg = new TextEncoder().encode(buildMessage(txType, domain, payload));
+  const sig = await crypto.subtle.sign({name:"ECDSA",hash:"SHA-256"}, privateKey, msg);
+  return { publicKey: publicKeyHex, signature: hex(sig) };
 }
 
 // Attaches the logged-in user's JWT (if any) so admin-only endpoints can verify the caller.
@@ -529,9 +574,14 @@ async function registerDomain(){
     }
   } catch(e){}
   try{
-    const signed  = await signData(domain, ip);
+    const signed  = await signData("register", domain, { ip });
     const payload = { domain, ip, owner_public_key: signed.publicKey, signature: signed.signature };
     const data    = await apiPost("/api/v1/domains/register", payload);
+    if(data.detail || data.error){
+      show("registerOutput", { error: data.detail || data.error });
+      notify(data.detail || data.error);
+      return;
+    }
     show("registerOutput",{message:"Domain registered successfully with valid ECDSA signature.",transaction:data});
     notify("Secure blockchain DNS registration completed.");
     addLog("DOMAIN_REGISTERED",{domain,ip});
@@ -795,9 +845,14 @@ async function updateDomainIp(){
   const ip = document.getElementById("updateIp").value.trim();
   if(!domain || !ip){ show("updateDomainOutput", { error:"Please enter domain name and new IP address." }); return; }
   try{
-    const signed = await signData(domain, ip);
-    const payload = { domain, ip, owner_public_key: signed.publicKey, signature: signed.signature };
-    const data = await apiPost("/api/v1/domains/update", payload);
+    const signed = await signData("update", domain, { ip });
+    const payload = { ip, owner_public_key: signed.publicKey, signature: signed.signature };
+    const data = await apiPut("/api/v1/domains/" + encodeURIComponent(domain) + "/ip", payload);
+    if(data.detail || data.error){
+      show("updateDomainOutput", { error: data.detail || data.error });
+      notify(data.detail || data.error);
+      return;
+    }
     show("updateDomainOutput", { message:"Domain IP updated successfully.", result:data });
     notify("Domain IP updated.");
     addLog("DOMAIN_IP_UPDATED", { domain, ip });
@@ -812,9 +867,14 @@ async function transferDomainOwnership(){
   const newOwner = document.getElementById("newOwnerPublicKey").value.trim();
   if(!domain || !newOwner){ show("transferDomainOutput", { error:"Please enter domain name and new owner public key." }); return; }
   try{
-    const signed = await signData(domain, newOwner);
-    const payload = { domain, new_owner_public_key: newOwner, owner_public_key: signed.publicKey, signature: signed.signature };
-    const data = await apiPost("/api/v1/domains/transfer", payload);
+    const signed = await signData("transfer", domain, { new_owner_public_key: newOwner });
+    const payload = { new_owner_public_key: newOwner, owner_public_key: signed.publicKey, signature: signed.signature };
+    const data = await apiPost("/api/v1/domains/" + encodeURIComponent(domain) + "/transfer", payload);
+    if(data.detail || data.error){
+      show("transferDomainOutput", { error: data.detail || data.error });
+      notify(data.detail || data.error);
+      return;
+    }
     show("transferDomainOutput", { message:"Domain ownership transferred successfully.", result:data });
     notify("Domain ownership transferred.");
     addLog("DOMAIN_TRANSFERRED", { domain });
