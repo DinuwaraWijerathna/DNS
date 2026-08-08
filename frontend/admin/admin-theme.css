@@ -1,0 +1,356 @@
+/* ============================================================
+   ADMIN THEME — scoped entirely to body.admin-scope
+   This file only affects the 7 admin pages. Customer-facing
+   pages keep using shared.css untouched.
+   ============================================================ */
+
+body.admin-scope{
+  --a-bg:#f3f4f9;
+  --a-surface:#ffffff;
+  --a-border:#e6e8f1;
+  --a-border-soft:#eef0f7;
+  --a-ink:#12162b;
+  --a-muted:#6b7280;
+  --a-muted-2:#9aa2b8;
+  --a-accent:#4f46e5;
+  --a-accent-2:#7c3aed;
+  --a-accent-dark:#3730a3;
+  --a-accent-soft:#eef0fe;
+  --a-danger:#dc2626;
+  --a-success:#16a34a;
+  --a-sidebar:#0b0f1f;
+  --a-sidebar-2:#141a33;
+  --a-radius-lg:18px;
+  --a-radius-md:14px;
+  --a-radius-sm:10px;
+  --a-shadow:0 1px 2px rgba(16,24,40,.04),0 1px 3px rgba(16,24,40,.03);
+  --a-shadow-lg:0 18px 40px -18px rgba(17,24,60,.28);
+
+  background:var(--a-bg);
+  color:var(--a-ink);
+}
+
+body.admin-scope *{ font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif; }
+
+/* ─── HEADER ─── */
+body.admin-scope .site-header{
+  background:linear-gradient(180deg,#0b0f1f,#10142a);
+  border-bottom:1px solid rgba(255,255,255,.06);
+  border-radius:0;
+  box-shadow:0 1px 0 rgba(255,255,255,.04);
+}
+
+body.admin-scope .site-logo{ position:relative; }
+
+body.admin-scope .site-logo::after{
+  content:"Admin Console";
+  margin-left:16px;
+  padding:6px 14px;
+  background:rgba(124,58,237,.14);
+  border:1px solid rgba(124,58,237,.4);
+  border-radius:999px;
+  color:#c9bff7;
+  font-size:11.5px;
+  font-weight:700;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+  white-space:nowrap;
+}
+
+body.admin-scope .site-nav-auth .user-pill{
+  background:rgba(124,58,237,.14);
+  color:#e6defb;
+  border:1px solid rgba(124,58,237,.4);
+  font-weight:700;
+}
+
+body.admin-scope .site-nav-auth .logout-btn{
+  background:transparent;
+  border:1px solid rgba(220,38,38,.55);
+  color:#fca5a5;
+}
+body.admin-scope .site-nav-auth .logout-btn:hover{
+  background:rgba(220,38,38,.15);
+  border-color:#dc2626;
+  color:#fff;
+}
+
+/* ─── SIDEBAR ─── */
+body.admin-scope .sidebar{
+  background:linear-gradient(180deg,var(--a-sidebar),var(--a-sidebar-2));
+  border-right:1px solid rgba(255,255,255,.05);
+  padding:26px 16px;
+}
+
+body.admin-scope .sidebar-title{
+  color:#6f7699;
+  font-size:11.5px;
+  letter-spacing:.08em;
+}
+
+body.admin-scope .nav button{
+  color:#aeb4cf;
+  border-radius:var(--a-radius-sm);
+  padding:11px 14px;
+  margin-bottom:3px;
+  position:relative;
+  transition:background .15s ease,color .15s ease,padding-left .15s ease;
+}
+
+body.admin-scope .nav button:hover{
+  background:rgba(124,58,237,.10);
+  color:#fff;
+}
+
+body.admin-scope .nav button.active{
+  background:linear-gradient(90deg,rgba(124,58,237,.28),rgba(79,70,229,.10));
+  color:#ffffff;
+  box-shadow:inset 3px 0 0 0 #8b5cf6;
+  padding-left:17px;
+}
+
+body.admin-scope .sidebar-footer{
+  color:#4d5478;
+  border-top:1px solid rgba(255,255,255,.06);
+  font-size:11.5px;
+  letter-spacing:.02em;
+}
+
+/* ─── CONTENT / HERO ─── */
+body.admin-scope .content{ padding:32px 32px 40px; }
+
+body.admin-scope .hero{
+  background:
+    radial-gradient(circle at 85% 0%,rgba(139,92,246,.35),transparent 55%),
+    linear-gradient(135deg,#0b0f1f 0%,#181234 45%,#3c2a86 100%);
+  border-radius:var(--a-radius-lg);
+  box-shadow:var(--a-shadow-lg);
+  padding:36px 40px;
+  position:relative;
+  overflow:hidden;
+}
+
+body.admin-scope .hero::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),
+                    linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px);
+  background-size:34px 34px;
+  mask-image:linear-gradient(180deg,rgba(0,0,0,.5),transparent 75%);
+  pointer-events:none;
+}
+
+body.admin-scope .hero h1{
+  font-size:29px;
+  font-weight:800;
+  letter-spacing:-.01em;
+  position:relative;
+}
+
+body.admin-scope .hero p{
+  color:#cbd0f0;
+  font-size:15px;
+  line-height:1.65;
+  position:relative;
+}
+
+/* ─── STAT CARDS ─── */
+body.admin-scope .cards{ gap:18px; }
+
+body.admin-scope .card{
+  background:var(--a-surface);
+  border:1px solid var(--a-border);
+  border-radius:var(--a-radius-md);
+  box-shadow:var(--a-shadow);
+  padding:22px 22px 20px;
+  position:relative;
+  overflow:hidden;
+  transition:transform .18s ease,box-shadow .18s ease;
+}
+
+body.admin-scope .card::before{
+  content:"";
+  position:absolute;
+  top:0; left:0; right:0;
+  height:3px;
+  background:linear-gradient(90deg,var(--a-accent),var(--a-accent-2));
+}
+
+body.admin-scope .card:hover{
+  transform:translateY(-3px);
+  box-shadow:0 14px 28px -16px rgba(79,70,229,.35);
+}
+
+body.admin-scope .card small{
+  color:var(--a-muted);
+  font-weight:700;
+  letter-spacing:.07em;
+  font-size:11.5px;
+}
+
+body.admin-scope .card h2{
+  color:var(--a-ink);
+  font-weight:800;
+  font-size:30px;
+  letter-spacing:-.01em;
+}
+
+/* ─── PANELS ─── */
+body.admin-scope .panel{
+  background:var(--a-surface);
+  border:1px solid var(--a-border);
+  border-radius:var(--a-radius-md);
+  box-shadow:var(--a-shadow);
+  padding:26px 26px 28px;
+}
+
+body.admin-scope .panel > h2:first-child{
+  font-size:17px;
+  font-weight:800;
+  color:var(--a-ink);
+  margin:-2px 0 18px;
+  padding-bottom:14px;
+  border-bottom:1px solid var(--a-border-soft);
+}
+
+body.admin-scope .panel > p{
+  color:var(--a-muted);
+  font-size:14.5px;
+  margin-top:-8px;
+  line-height:1.6;
+}
+
+body.admin-scope .grid{ gap:18px; }
+
+/* ─── FORM ELEMENTS ─── */
+body.admin-scope label{
+  color:#374151;
+  font-weight:700;
+  font-size:12.5px;
+  letter-spacing:.02em;
+  text-transform:uppercase;
+}
+
+body.admin-scope input,
+body.admin-scope select,
+body.admin-scope textarea{
+  background:#fbfbfe;
+  border:1px solid var(--a-border);
+  border-radius:var(--a-radius-sm);
+  padding:12px 14px;
+  transition:border-color .15s ease,box-shadow .15s ease;
+}
+
+body.admin-scope input:focus,
+body.admin-scope select:focus,
+body.admin-scope textarea:focus{
+  outline:none;
+  border-color:var(--a-accent);
+  box-shadow:0 0 0 3px rgba(79,70,229,.15);
+}
+
+/* ─── BUTTONS ─── */
+body.admin-scope button.primary{
+  background:linear-gradient(135deg,var(--a-accent),var(--a-accent-dark));
+  border-radius:var(--a-radius-sm);
+  font-weight:700;
+  letter-spacing:.01em;
+  box-shadow:0 6px 14px -6px rgba(79,70,229,.55);
+  transition:transform .15s ease,box-shadow .15s ease,filter .15s ease;
+}
+
+body.admin-scope button.primary:hover{
+  background:linear-gradient(135deg,var(--a-accent),var(--a-accent-dark));
+  filter:brightness(1.08);
+  transform:translateY(-1px);
+  box-shadow:0 10px 20px -8px rgba(79,70,229,.6);
+}
+
+body.admin-scope button.danger{
+  background:linear-gradient(135deg,#ef4444,#b91c1c);
+  box-shadow:0 6px 14px -6px rgba(220,38,38,.5);
+}
+
+body.admin-scope button.danger:hover{
+  filter:brightness(1.08);
+  transform:translateY(-1px);
+}
+
+/* ─── TABLE ─── */
+body.admin-scope .panel table{
+  border:1px solid var(--a-border-soft);
+  border-radius:var(--a-radius-sm);
+  overflow:hidden;
+}
+
+body.admin-scope th{
+  background:#f8f9fd;
+  color:var(--a-muted);
+  font-weight:700;
+  font-size:11px;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+  border-bottom:1px solid var(--a-border);
+}
+
+body.admin-scope td{
+  border-bottom:1px solid var(--a-border-soft);
+  color:#1f2333;
+  font-size:14px;
+}
+
+body.admin-scope tbody tr:hover td{
+  background:#f8f8ff;
+}
+
+body.admin-scope tbody tr:last-child td{ border-bottom:none; }
+
+body.admin-scope .badge{
+  border-radius:8px;
+  font-weight:700;
+  letter-spacing:.02em;
+  padding:5px 11px;
+}
+
+/* ─── OUTPUT / CONSOLE BLOCKS ─── */
+body.admin-scope pre{
+  background:var(--a-sidebar);
+  border:1px solid rgba(255,255,255,.06);
+  border-radius:var(--a-radius-md);
+  color:#7dd3a8;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.03);
+}
+
+/* ─── TOASTS ─── */
+body.admin-scope .toast{
+  background:var(--a-sidebar);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:var(--a-radius-sm);
+}
+
+/* ─── FOOTER (simplified for admin) ─── */
+body.admin-scope .footer{
+  background:var(--a-sidebar);
+  padding:30px 40px 20px;
+}
+
+body.admin-scope .footer-cta{ display:none; }
+
+body.admin-scope .footer-grid{
+  grid-template-columns:1.6fr 1fr;
+  max-width:1100px;
+}
+
+body.admin-scope .footer-grid > div:nth-child(3){ display:none; }
+
+body.admin-scope .footer h4{ font-size:15px; }
+
+body.admin-scope .footer-bottom{
+  max-width:1100px;
+}
+
+/* ─── RESPONSIVE ─── */
+@media(max-width:1100px){
+  body.admin-scope .content{ padding:20px; }
+}

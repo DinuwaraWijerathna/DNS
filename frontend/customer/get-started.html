@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Get Started | BDNS</title>
+<link rel="stylesheet" href="/shared.css" />
+</head>
+<body class="public-mode">
+
+<div class="toast-area" id="toastArea"></div>
+
+<header class="site-header">
+  <div class="site-logo" onclick="navigateTo('overview')">
+  <img src="/logo.png" alt="SecureDNS Logo">
+</div>
+
+  <!-- Public nav (not logged in) -->
+  <nav class="site-nav-public" id="navPublic">
+    <button onclick="navigateTo('pricing')">Pricing</button>
+    <button onclick="navigateTo('registerUser')">Register</button>
+    <button onclick="navigateTo('login')">Log In</button>
+  </nav>
+
+  <!-- Auth nav (logged in) -->
+  <nav class="site-nav-auth" id="navAuth">
+    <span class="user-pill" id="currentUser" onclick="showProfile()">Guest</span>
+    <button class="logout-btn" onclick="logout()">Logout</button>
+  </nav>
+</header>
+
+<div class="app">
+
+  <aside class="sidebar">
+    <div class="sidebar-title">Navigation</div>
+    <div class="nav" id="sidebarNav"></div>
+    <div class="sidebar-footer">BDNS Enterprise Security Platform</div>
+  </aside>
+
+  <main class="main">
+    <div class="content">
+      <section id="getStarted" class="page active">
+  <div class="hero">
+    <h1>Get Started with Blockchain DNS Security</h1>
+    <p>
+      BDNS helps users protect domain records using blockchain verification,
+      cryptographic ownership validation, and real-time DNS security monitoring.
+    </p>
+  </div>
+
+  <div class="grid">
+    <div class="panel">
+      <h2>What You Can Do</h2>
+      <p>With this platform, customers can register and manage secure DNS records in a blockchain-backed environment.</p>
+
+      <div class="block-grid">
+        <div class="block-card">
+          <strong>Register Secure Domains</strong><br>
+          Add domain records with cryptographic ownership verification.
+        </div>
+
+        <div class="block-card">
+          <strong>Resolve Domains</strong><br>
+          Check verified domain records stored in the blockchain DNS registry.
+        </div>
+
+        <div class="block-card">
+          <strong>Monitor Security</strong><br>
+          View suspicious activity, spoofing attempts, and security events.
+        </div>
+
+        <div class="block-card">
+          <strong>Audit Blockchain Records</strong><br>
+          Review domain history, ledger activity, and verification evidence.
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>How the System Works</h2>
+      <p>
+        BDNS protects DNS records by validating ownership before registration.
+        Once verified, domain records are stored in a blockchain-style ledger,
+        making unauthorized changes easier to detect.
+      </p>
+
+      <div class="block-grid">
+        <div class="block-card"><strong>Step 1:</strong> Create a customer account.</div>
+        <div class="block-card"><strong>Step 2:</strong> Register a domain with IP details.</div>
+        <div class="block-card"><strong>Step 3:</strong> Verify ownership using digital signing.</div>
+        <div class="block-card"><strong>Step 4:</strong> Monitor DNS activity and security alerts.</div>
+      </div>
+
+      <button class="primary" onclick="navigateTo('registerUser')">Create Customer Account</button>
+      <button class="primary" onclick="navigateTo('login')">Already Have an Account?</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Who Can Use This Platform?</h2>
+    <div class="cards">
+      <div class="card">
+        <small>INDIVIDUAL USERS</small>
+        <h2>Personal</h2>
+        <p>Protect personal domains from unauthorized DNS changes.</p>
+      </div>
+
+      <div class="card">
+        <small>BUSINESSES</small>
+        <h2>Company</h2>
+        <p>Secure business domains and monitor DNS-related threats.</p>
+      </div>
+
+      <div class="card">
+        <small>SECURITY TEAMS</small>
+        <h2>Admin</h2>
+        <p>Review security events, audit history, and blockchain activity.</p>
+      </div>
+
+      <div class="card">
+        <small>DEVELOPERS</small>
+        <h2>Testing</h2>
+        <p>Test DNS spoofing prevention and blockchain validation flows.</p>
+      </div>
+    </div>
+  </div>
+</section>
+    </div>
+
+<footer class="footer" id="siteFooter" style="display:none">
+      <div class="footer-cta" id="footerCta">
+        <h2>Ready to secure your DNS infrastructure?</h2>
+        <p>Protect your domains with blockchain verification, cryptographic ownership validation, and real-time threat monitoring.</p>
+        <button onclick="navigateTo('getStarted')">Get Started Now</button>
+      </div>
+
+      <div class="footer-grid">
+        <div>
+          <div class="footer-logo" onclick="navigateTo('overview')">
+          <img src="/logo.png" alt="SecureDNS Logo">
+        </div>
+          <p>Blockchain-based DNS security platform designed to protect digital infrastructure from spoofing, tampering, and unauthorized DNS manipulation.</p>
+          <p>Secure DNS. Verified ownership. Real-time monitoring.</p>
+        </div>
+        <div>
+          <h4>Sitemap</h4>
+          <a onclick="navigateTo('overview')">Home</a>
+          <a onclick="navigateTo('pricing')">Pricing</a>
+          <a onclick="navigateTo('login')">Log In</a>
+          <a onclick="navigateTo('registerUser')">Register</a>
+          <a onclick="requireAuthThenGo('monitoring')">Security Monitoring</a>
+        </div>
+        <div>
+          <h4>Security Updates</h4>
+          <p>Receive blockchain DNS security insights and platform updates.</p>
+          <div class="footer-input-row">
+            <input id="footerEmail" placeholder="Your email">
+            <button onclick="subscribeFooter()">Sign Up</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <div>© 2026 BDNS Enterprise Security Platform. All rights reserved.</div>
+        <div>Blockchain DNS Security | Threat Monitoring | Audit Protection</div>
+      </div>
+    </footer>
+
+  </main>
+</div>
+
+
+<script src="/shared.js"></script>
+<script>initPage('getStarted');</script>
+</body>
+</html>

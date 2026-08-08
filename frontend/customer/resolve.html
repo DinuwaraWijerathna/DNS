@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Resolve Domain | BDNS</title>
+<link rel="stylesheet" href="/shared.css" />
+</head>
+<body class="public-mode">
+
+<div class="toast-area" id="toastArea"></div>
+
+<header class="site-header">
+  <div class="site-logo" onclick="navigateTo('overview')">
+  <img src="/logo.png" alt="SecureDNS Logo">
+</div>
+
+  <!-- Public nav (not logged in) -->
+  <nav class="site-nav-public" id="navPublic">
+    <button onclick="navigateTo('pricing')">Pricing</button>
+    <button onclick="navigateTo('registerUser')">Register</button>
+    <button onclick="navigateTo('login')">Log In</button>
+  </nav>
+
+  <!-- Auth nav (logged in) -->
+  <nav class="site-nav-auth" id="navAuth">
+    <span class="user-pill" id="currentUser" onclick="showProfile()">Guest</span>
+    <button class="logout-btn" onclick="logout()">Logout</button>
+  </nav>
+</header>
+
+<div class="app">
+
+  <aside class="sidebar">
+    <div class="sidebar-title">Navigation</div>
+    <div class="nav" id="sidebarNav"></div>
+    <div class="sidebar-footer">BDNS Enterprise Security Platform</div>
+  </aside>
+
+  <main class="main">
+    <div class="content">
+      <section id="resolve" class="page active">
+        <div class="panel">
+          <h2>Resolve Domain</h2>
+          <p>Resolve and validate blockchain-backed DNS records using decentralized verification.</p>
+          <label>Domain Name</label>
+          <input id="resolveDomain" placeholder="example.com">
+          <button class="primary" onclick="resolveDomain()">Resolve Domain</button>
+          <pre id="resolveOutput">Awaiting secure DNS resolution request...</pre>
+        </div>
+      </section>
+    </div>
+
+<footer class="footer" id="siteFooter" style="display:none">
+      <div class="footer-cta" id="footerCta">
+        <h2>Ready to secure your DNS infrastructure?</h2>
+        <p>Protect your domains with blockchain verification, cryptographic ownership validation, and real-time threat monitoring.</p>
+        <button onclick="navigateTo('getStarted')">Get Started Now</button>
+      </div>
+
+      <div class="footer-grid">
+        <div>
+          <div class="footer-logo" onclick="navigateTo('overview')">
+          <img src="/logo.png" alt="SecureDNS Logo">
+        </div>
+          <p>Blockchain-based DNS security platform designed to protect digital infrastructure from spoofing, tampering, and unauthorized DNS manipulation.</p>
+          <p>Secure DNS. Verified ownership. Real-time monitoring.</p>
+        </div>
+        <div>
+          <h4>Sitemap</h4>
+          <a onclick="navigateTo('overview')">Home</a>
+          <a onclick="navigateTo('pricing')">Pricing</a>
+          <a onclick="navigateTo('login')">Log In</a>
+          <a onclick="navigateTo('registerUser')">Register</a>
+          <a onclick="requireAuthThenGo('monitoring')">Security Monitoring</a>
+        </div>
+        <div>
+          <h4>Security Updates</h4>
+          <p>Receive blockchain DNS security insights and platform updates.</p>
+          <div class="footer-input-row">
+            <input id="footerEmail" placeholder="Your email">
+            <button onclick="subscribeFooter()">Sign Up</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <div>© 2026 BDNS Enterprise Security Platform. All rights reserved.</div>
+        <div>Blockchain DNS Security | Threat Monitoring | Audit Protection</div>
+      </div>
+    </footer>
+
+  </main>
+</div>
+
+
+<script src="/shared.js"></script>
+<script>initPage('resolve');</script>
+</body>
+</html>

@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>BDNS Secure Dashboard</title>
+<link rel="stylesheet" href="/shared.css" />
+</head>
+<body class="public-mode">
+
+<div class="toast-area" id="toastArea"></div>
+
+<header class="site-header">
+  <div class="site-logo" onclick="navigateTo('overview')">
+  <img src="/logo.png" alt="SecureDNS Logo">
+</div>
+
+  <!-- Public nav (not logged in) -->
+  <nav class="site-nav-public" id="navPublic">
+    <button onclick="navigateTo('pricing')">Pricing</button>
+    <button onclick="navigateTo('registerUser')">Register</button>
+    <button onclick="navigateTo('login')">Log In</button>
+  </nav>
+
+  <!-- Auth nav (logged in) -->
+  <nav class="site-nav-auth" id="navAuth">
+    <span class="user-pill" id="currentUser" onclick="showProfile()">Guest</span>
+    <button class="logout-btn" onclick="logout()">Logout</button>
+  </nav>
+</header>
+
+<div class="app">
+
+  <aside class="sidebar">
+    <div class="sidebar-title">Navigation</div>
+    <div class="nav" id="sidebarNav"></div>
+    <div class="sidebar-footer">BDNS Enterprise Security Platform</div>
+  </aside>
+
+  <main class="main">
+    <div class="content">
+      <section id="overview" class="page active">
+
+        <div class="landing-hero">
+          <div class="landing-title">
+            <h1>Secure Blockchain DNS Infrastructure</h1>
+            <p>
+              Protect domains from spoofing, cache poisoning, and unauthorized DNS record manipulation
+              using blockchain verification, ECDSA ownership validation, and real-time threat monitoring.
+            </p>
+            <div class="landing-actions">
+              <button class="btn-light" onclick="navigateTo('pricing')">Explore Pricing Plans</button>
+              <button class="btn-dark" onclick="navigateTo('getStarted')">Get Started</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="landing-service-cards">
+          <div class="service-card">
+            <div class="service-icon">⛓️</div>
+            <h3>Blockchain DNS</h3>
+            <p>Tamper-resistant DNS records secured through immutable blockchain transactions.</p>
+            <button class="primary" onclick="navigateTo('pricing')">Learn More</button>
+          </div>
+          <div class="service-card">
+            <div class="service-icon">🛡️</div>
+            <h3>Threat Monitoring</h3>
+            <p>Monitor spoofing attempts, suspicious DNS activity, and blockchain security events.</p>
+            <button class="primary" onclick="requireAuthThenGo('monitoring')">Learn More</button>
+          </div>
+          <div class="service-card">
+            <div class="service-icon">🔐</div>
+            <h3>Ownership Verification</h3>
+            <p>Use ECDSA signatures to verify domain ownership before record registration.</p>
+            <button class="primary" onclick="navigateTo('registerUser')">Learn More</button>
+          </div>
+        </div>
+
+        <div class="focus-section">
+          <h2>Our Security Focus</h2>
+          <div class="focus-grid">
+            <div class="focus-item">
+              <h3>DNS Protection</h3>
+              <p>Defend against spoofing and unauthorized DNS responses.</p>
+            </div>
+            <div class="focus-item">
+              <h3>Blockchain Validation</h3>
+              <p>Verify domain records through immutable blockchain storage.</p>
+            </div>
+            <div class="focus-item">
+              <h3>Real-Time Monitoring</h3>
+              <p>Track domain activity, alerts, and blocked attack attempts.</p>
+            </div>
+            <div class="focus-item">
+              <h3>Audit Logs</h3>
+              <p>Export blockchain and security activity for compliance review.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>Check Domain Availability</h2>
+          <p>Check whether a domain already exists in the BDNS registry or public internet DNS.</p>
+
+          <label>Domain Name</label>
+          <input id="landingCheckDomain" placeholder="example.com">
+          <button class="primary" onclick="landingDomainCheck()">Check Availability</button>
+          <div id="landingCheckOutput" class="availability-card">Domain availability result will appear here...</div>        </div>
+
+        <div class="landing-pricing-cta">
+          <h2>Choose a Security Plan That Fits You</h2>
+          <p>
+            From personal domain protection to enterprise-grade DNS infrastructure,
+            BDNS provides flexible blockchain security plans for individuals, startups,
+            businesses, and large organizations.
+          </p>
+          <button class="primary" onclick="navigateTo('pricing')">Explore Pricing Plans</button>
+        </div>
+
+      </section>
+    </div>
+
+<footer class="footer" id="siteFooter" style="display:none">
+      <div class="footer-cta" id="footerCta">
+        <h2>Ready to secure your DNS infrastructure?</h2>
+        <p>Protect your domains with blockchain verification, cryptographic ownership validation, and real-time threat monitoring.</p>
+        <button onclick="navigateTo('getStarted')">Get Started Now</button>
+      </div>
+
+      <div class="footer-grid">
+        <div>
+          <div class="footer-logo" onclick="navigateTo('overview')">
+          <img src="/logo.png" alt="SecureDNS Logo">
+        </div>
+          <p>Blockchain-based DNS security platform designed to protect digital infrastructure from spoofing, tampering, and unauthorized DNS manipulation.</p>
+          <p>Secure DNS. Verified ownership. Real-time monitoring.</p>
+        </div>
+        <div>
+          <h4>Sitemap</h4>
+          <a onclick="navigateTo('overview')">Home</a>
+          <a onclick="navigateTo('pricing')">Pricing</a>
+          <a onclick="navigateTo('login')">Log In</a>
+          <a onclick="navigateTo('registerUser')">Register</a>
+          <a onclick="requireAuthThenGo('monitoring')">Security Monitoring</a>
+        </div>
+        <div>
+          <h4>Security Updates</h4>
+          <p>Receive blockchain DNS security insights and platform updates.</p>
+          <div class="footer-input-row">
+            <input id="footerEmail" placeholder="Your email">
+            <button onclick="subscribeFooter()">Sign Up</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <div>© 2026 BDNS Enterprise Security Platform. All rights reserved.</div>
+        <div>Blockchain DNS Security | Threat Monitoring | Audit Protection</div>
+      </div>
+    </footer>
+
+  </main>
+</div>
+
+
+<script src="/shared.js"></script>
+<script>initPage('overview');</script>
+</body>
+</html>

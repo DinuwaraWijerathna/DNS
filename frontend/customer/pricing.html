@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Pricing | BDNS</title>
+<link rel="stylesheet" href="/shared.css" />
+</head>
+<body class="public-mode">
+
+<div class="toast-area" id="toastArea"></div>
+
+<header class="site-header">
+  <div class="site-logo" onclick="navigateTo('overview')">
+  <img src="/logo.png" alt="SecureDNS Logo">
+</div>
+
+  <!-- Public nav (not logged in) -->
+  <nav class="site-nav-public" id="navPublic">
+    <button onclick="navigateTo('pricing')">Pricing</button>
+    <button onclick="navigateTo('registerUser')">Register</button>
+    <button onclick="navigateTo('login')">Log In</button>
+  </nav>
+
+  <!-- Auth nav (logged in) -->
+  <nav class="site-nav-auth" id="navAuth">
+    <span class="user-pill" id="currentUser" onclick="showProfile()">Guest</span>
+    <button class="logout-btn" onclick="logout()">Logout</button>
+  </nav>
+</header>
+
+<div class="app">
+
+  <aside class="sidebar">
+    <div class="sidebar-title">Navigation</div>
+    <div class="nav" id="sidebarNav"></div>
+    <div class="sidebar-footer">BDNS Enterprise Security Platform</div>
+  </aside>
+
+  <main class="main">
+    <div class="content">
+      <section id="pricing" class="page active">
+        <div class="pricing-page">
+          <div class="pricing-title">
+            <h1>Pricing Plans for Every DNS Security Need</h1>
+            <p>Choose a blockchain DNS protection plan that fits individuals, growing teams, businesses, and enterprises.</p>
+          </div>
+          <div class="pricing-cards">
+            <div class="price-card featured">
+              <small>INDIVIDUAL</small>
+              <h2>$9 <span>/ month</span></h2>
+              <ul>
+                <li>Personal domain protection</li>
+                <li>Blockchain DNS verification</li>
+                <li>Basic spoofing protection</li>
+                <li>Up to 5 domains</li>
+                <li>Basic audit history</li>
+              </ul>
+              <div id="paypal-individual"></div>
+            </div>
+            <div class="price-card featured">
+              <small>SMALL BUSINESS</small>
+              <h2>$29 <span>/ month</span></h2>
+              <ul>
+                <li>Secure DNS registration</li>
+                <li>ECDSA ownership validation</li>
+                <li>Threat monitoring</li>
+                <li>Up to 25 domains</li>
+                <li>Exportable logs</li>
+              </ul>
+              <div id="paypal-smallbusiness"></div>
+            </div>
+            <div class="price-card featured">
+              <small>BUSINESS</small>
+              <h2>$99 <span>/ month</span></h2>
+              <ul>
+                <li>Advanced DNS protection</li>
+                <li>Real-time security monitoring</li>
+                <li>Blockchain audit ledger</li>
+                <li>Up to 250 domains</li>
+                <li>Attack simulation reports</li>
+              </ul>
+              <div id="paypal-business"></div>
+            </div>
+            <div class="price-card featured">
+              <small>ENTERPRISE</small>
+              <h2>Custom</h2>
+              <ul>
+                <li>Unlimited domains</li>
+                <li>Enterprise blockchain cluster</li>
+                <li>SOC monitoring integration</li>
+                <li>Advanced threat analytics</li>
+                <li>Priority support</li>
+              </ul>
+              <button onclick="navigateTo('registerUser')">Contact Sales</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+<footer class="footer" id="siteFooter" style="display:none">
+      <div class="footer-cta" id="footerCta">
+        <h2>Ready to secure your DNS infrastructure?</h2>
+        <p>Protect your domains with blockchain verification, cryptographic ownership validation, and real-time threat monitoring.</p>
+        <button onclick="navigateTo('getStarted')">Get Started Now</button>
+      </div>
+
+      <div class="footer-grid">
+        <div>
+          <div class="footer-logo" onclick="navigateTo('overview')">
+          <img src="/logo.png" alt="SecureDNS Logo">
+        </div>
+          <p>Blockchain-based DNS security platform designed to protect digital infrastructure from spoofing, tampering, and unauthorized DNS manipulation.</p>
+          <p>Secure DNS. Verified ownership. Real-time monitoring.</p>
+        </div>
+        <div>
+          <h4>Sitemap</h4>
+          <a onclick="navigateTo('overview')">Home</a>
+          <a onclick="navigateTo('pricing')">Pricing</a>
+          <a onclick="navigateTo('login')">Log In</a>
+          <a onclick="navigateTo('registerUser')">Register</a>
+          <a onclick="requireAuthThenGo('monitoring')">Security Monitoring</a>
+        </div>
+        <div>
+          <h4>Security Updates</h4>
+          <p>Receive blockchain DNS security insights and platform updates.</p>
+          <div class="footer-input-row">
+            <input id="footerEmail" placeholder="Your email">
+            <button onclick="subscribeFooter()">Sign Up</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <div>© 2026 BDNS Enterprise Security Platform. All rights reserved.</div>
+        <div>Blockchain DNS Security | Threat Monitoring | Audit Protection</div>
+      </div>
+    </footer>
+
+  </main>
+</div>
+
+<script src="https://www.paypal.com/sdk/js?client-id=AYDANUFtgAOmbo7kxSCOHQy-TPuq8cjCCMihCuof6ymvradRDKzNIsmu1RFog69siXZ_CaBXTnG8yxmI&currency=USD"></script>
+
+<script src="/shared.js"></script>
+<script>initPage('pricing');</script>
+<script>
+// All order creation and capture now happens on the BACKEND.
+// The browser never decides the price - it only tells the backend
+// which plan was chosen, and the backend looks up the real amount,
+// talks to PayPal directly with the secret key, and stores the
+// verified result in Supabase. This is what makes it a real payment
+// integration instead of a client-side-only demo button.
+
+function renderPayPalPlan(containerId, plan, successMessage){
+  paypal.Buttons({
+    createOrder: async () => {
+      const res = await apiPost("/api/v1/payments/create-order", { plan });
+      if(!res.order_id){ notify("Could not start payment. Please try again."); throw new Error("No order id returned"); }
+      return res.order_id;
+    },
+    onApprove: async (data) => {
+      const user = getSession();
+      const res = await apiPost("/api/v1/payments/capture-order", {
+        order_id: data.orderID,
+        plan: plan,
+        user_email: user ? user.email : null
+      });
+      if(res.status === "COMPLETED"){
+        notify(successMessage);
+        addLog("PAYMENT_COMPLETED", { plan, order_id: data.orderID, amount: res.amount, currency: res.currency });
+      } else {
+        notify("Payment could not be verified. Please contact support.");
+      }
+    },
+    onError: () => {
+      notify("Payment failed. Please try again.");
+    }
+  }).render('#' + containerId);
+}
+
+renderPayPalPlan('paypal-individual', 'individual', 'Individual Plan payment successful and verified.');
+renderPayPalPlan('paypal-smallbusiness', 'smallbusiness', 'Small Business Plan payment successful and verified.');
+renderPayPalPlan('paypal-business', 'business', 'Business Plan payment successful and verified.');
+</script>
+</body>
+</html>

@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>My Profile | BDNS</title>
+<link rel="stylesheet" href="/shared.css" />
+</head>
+<body class="public-mode">
+
+<div class="toast-area" id="toastArea"></div>
+
+<header class="site-header">
+  <div class="site-logo" onclick="navigateTo('overview')">
+  <img src="/logo.png" alt="SecureDNS Logo">
+</div>
+
+  <!-- Public nav (not logged in) -->
+  <nav class="site-nav-public" id="navPublic">
+    <button onclick="navigateTo('pricing')">Pricing</button>
+    <button onclick="navigateTo('registerUser')">Register</button>
+    <button onclick="navigateTo('login')">Log In</button>
+  </nav>
+
+  <!-- Auth nav (logged in) -->
+  <nav class="site-nav-auth" id="navAuth">
+    <span class="user-pill" id="currentUser" onclick="showProfile()">Guest</span>
+    <button class="logout-btn" onclick="logout()">Logout</button>
+  </nav>
+</header>
+
+<div class="app">
+
+  <aside class="sidebar">
+    <div class="sidebar-title">Navigation</div>
+    <div class="nav" id="sidebarNav"></div>
+    <div class="sidebar-footer">BDNS Enterprise Security Platform</div>
+  </aside>
+
+  <main class="main">
+    <div class="content">
+      <section id="myProfile" class="page active">
+        <div class="hero">
+          <h1>My Profile</h1>
+          <p>View and update your account details, or change your password.</p>
+        </div>
+
+        <div class="grid">
+          <div class="panel">
+            <h2>Account Details</h2>
+            <p>Your email and account role cannot be changed here.</p>
+
+            <div class="form-grid-2">
+              <div>
+                <label>Full Name</label>
+                <input id="profileFullName" placeholder="Your full name">
+              </div>
+              <div>
+                <label>Email</label>
+                <input id="profileEmail" type="email" disabled>
+              </div>
+            </div>
+
+            <div class="form-grid-2">
+              <div>
+                <label>Country</label>
+                <input id="profileCountry" placeholder="Your country">
+              </div>
+              <div>
+                <label>Contact Number</label>
+                <input id="profileContact" placeholder="Your contact number">
+              </div>
+            </div>
+
+            <div class="form-grid-2">
+              <div>
+                <label>Date of Birth</label>
+                <input id="profileDob" type="date">
+              </div>
+              <div>
+                <label>Account Type</label>
+                <input id="profileRole" disabled>
+              </div>
+            </div>
+
+            <button class="primary" id="saveProfileBtn" onclick="saveProfile()">Save Changes</button>
+          </div>
+
+          <div class="panel">
+            <h2>Change Password</h2>
+            <p>Update the password used to log in to your account.</p>
+
+            <div>
+              <label>Current Password</label>
+              <div class="password-field">
+                <input id="currentPassword" type="password" placeholder="Enter current password">
+                <span class="toggle-password" onclick="togglePassword('currentPassword', this)"></span>
+              </div>
+            </div>
+
+            <div class="form-grid-2">
+              <div>
+                <label>New Password</label>
+                <div class="password-field">
+                  <input id="newPassword" type="password" placeholder="At least 8 characters">
+                  <span class="toggle-password" onclick="togglePassword('newPassword', this)"></span>
+                </div>
+              </div>
+              <div>
+                <label>Confirm New Password</label>
+                <div class="password-field">
+                  <input id="confirmNewPassword" type="password" placeholder="Repeat new password">
+                  <span class="toggle-password" onclick="togglePassword('confirmNewPassword', this)"></span>
+                </div>
+              </div>
+            </div>
+            <small class="field-hint">You'll need to log in again next time using your new password.</small>
+
+            <button class="primary" id="changePasswordBtn" onclick="changePassword()">Update Password</button>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<script src="/shared.js"></script>
+<script>initPage('myProfile');</script>
+</body>
+</html>
