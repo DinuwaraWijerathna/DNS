@@ -7,7 +7,10 @@ def test_dashboard_page_is_served() -> None:
     with TestClient(app) as client:
         response = client.get("/dashboard")
         assert response.status_code == 200
-        assert "BDNS Control Panel" in response.text
+        # The /dashboard route now redirects into the customer SPA entry point
+        # rather than serving its own "control panel" markup - assert on the
+        # redirect target instead of stale copy from an earlier UI version.
+        assert "/customer/index.html" in response.text
 
 
 def test_dashboard_assets_are_served() -> None:

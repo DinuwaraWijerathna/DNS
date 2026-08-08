@@ -1,5 +1,7 @@
 from uuid import uuid4
 
+import hashlib
+
 from ecdsa import NIST256p, SigningKey
 from fastapi.testclient import TestClient
 
@@ -8,7 +10,7 @@ from app.main import app
 
 
 def _new_keypair() -> tuple[SigningKey, str]:
-    signing_key = SigningKey.generate(curve=NIST256p)
+    signing_key = SigningKey.generate(curve=NIST256p, hashfunc=hashlib.sha256)
     return signing_key, signing_key.verifying_key.to_string().hex()
 
 

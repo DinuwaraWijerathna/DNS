@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+
 from ecdsa import NIST256p, SigningKey
 from ecdsa.errors import MalformedPointError
 from fastapi import APIRouter, HTTPException
@@ -16,7 +18,10 @@ router = APIRouter(prefix="/crypto", tags=["crypto"])
 
 @router.post("/keypair", response_model=GenerateKeypairResponse)
 def generate_keypair() -> GenerateKeypairResponse:
-    signing_key = SigningKey.generate(curve=NIST256p)
+    # hashfunc must be sha256 to match SignatureService.verify_signature() - the
+    # ecdsa library defaults to sha1, which would make every signature produced
+    # from this keypair fail verification against a real domain endpoint.
+    signing_key = SigningKey.generate(curve=NIST256p, hashfunc=hashlib.sha256)
     return GenerateKeypairResponse(
         private_key=signing_key.to_string().hex(),
         public_key=signing_key.verifying_key.to_string().hex(),
@@ -26,7 +31,9 @@ def generate_keypair() -> GenerateKeypairResponse:
 @router.post("/sign", response_model=SignPayloadResponse)
 def sign_payload(payload: SignPayloadRequest) -> SignPayloadResponse:
     try:
-        signing_key = SigningKey.from_string(bytes.fromhex(payload.private_key), curve=NIST256p)
+        signing_key = SigningKey.from_string(
+            bytes.fromhex(payload.private_key), curve=NIST256p, hashfunc=hashlib.sha256
+        )
     except (ValueError, MalformedPointError) as exc:
         raise HTTPException(status_code=400, detail="Invalid private key format.") from exc
 

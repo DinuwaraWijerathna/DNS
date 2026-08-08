@@ -1,10 +1,12 @@
+import hashlib
+
 from ecdsa import NIST256p, SigningKey
 
 from app.crypto.signature_service import SignatureService
 
 
 def test_signature_service_verifies_valid_signature() -> None:
-    signing_key = SigningKey.generate(curve=NIST256p)
+    signing_key = SigningKey.generate(curve=NIST256p, hashfunc=hashlib.sha256)
     verifying_key = signing_key.verifying_key
     service = SignatureService()
 
@@ -24,8 +26,8 @@ def test_signature_service_verifies_valid_signature() -> None:
 
 
 def test_signature_service_rejects_invalid_signature() -> None:
-    signer_a = SigningKey.generate(curve=NIST256p)
-    signer_b = SigningKey.generate(curve=NIST256p)
+    signer_a = SigningKey.generate(curve=NIST256p, hashfunc=hashlib.sha256)
+    signer_b = SigningKey.generate(curve=NIST256p, hashfunc=hashlib.sha256)
     service = SignatureService()
 
     message = service.build_signing_message(
