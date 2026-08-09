@@ -15,6 +15,7 @@ from app.api.routes.resolver import router as resolver_router
 from app.api.routes.signing import router as signing_router
 from app.api.routes.security import router as security_router
 from app.api.routes.payments import router as payments_router
+from app.api.routes.tickets import router as tickets_router
 from app.api.routes.users import router as users_router
 from app.api.routes.ws import router as ws_router
 from app.blockchain.consensus_poa import PoAConsensus
@@ -83,6 +84,7 @@ app.include_router(security_router, prefix=settings.api_prefix)
 app.include_router(payments_router, prefix=settings.api_prefix)
 app.include_router(admin_router, prefix=settings.api_prefix)
 app.include_router(users_router, prefix=settings.api_prefix)
+app.include_router(tickets_router, prefix=settings.api_prefix)
 app.include_router(ws_router, prefix=settings.api_prefix)
 app.include_router(auth_router)
 app.mount("/ui/assets", StaticFiles(directory=FRONTEND_DIR / "assets"), name="ui-assets")

@@ -16,6 +16,8 @@ from app.models.schemas import (
     AdminUserStatusRequest,
     DomainMutationResponse,
     GlobalAuditEvent,
+    SupportTicketResponse,
+    UpdateSupportTicketRequest,
 )
 from app.services.domain_service import (
     DomainAlreadyActiveError,
@@ -350,3 +352,71 @@ def payments_summary(admin: dict = Depends(require_admin)) -> AdminPaymentSummar
         revenue_by_currency={k: round(v, 2) for k, v in revenue_by_currency.items()},
         revenue_by_plan={k: round(v, 2) for k, v in revenue_by_plan.items()},
     )
+
+
+# ─── SUPPORT TICKETS (admin view across every customer) ────────
+
+@router.get("/tickets", response_model=list[SupportTicketResponse])
+def admin_list_tickets(
+    admin: dict = Depends(require_admin),
+    status_filter: str | None = None,
+    priority: str | None = None,
+    limit: int = 200,
+) -> list[SupportTicketResponse]:
+    from app.api.routes.tickets import _to_ticket_response  # local import avoids a circular import at module load time
+
+    query = supabase.table("support_tickets").select("*")
+    if status_filter:
+        query = query.eq("status", status_filter.lower())
+    if priority:
+        query = query.eq("priority", priority.lower())
+
+    result = query.execute()
+    tickets: list[dict[str, Any]] = result.data or []
+    tickets.sort(key=lambda t: str(t.get("created_at") or ""), reverse=True)
+
+    return [_to_ticket_response(t, include_replies=False) for t in tickets[:limit]]
+
+
+@router.put("/tickets/{ticket_id}", response_model=SupportTicketResponse)
+def admin_update_ticket(
+    ticket_id: str,
+    payload: UpdateSupportTicketRequest,
+    admin: dict = Depends(require_admin),
+) -> SupportTicketResponse:
+    from app.api.routes.tickets import ALLOWED_PRIORITIES, ALLOWED_STATUSES, _fetch_ticket_or_404, _to_ticket_response
+
+    _fetch_ticket_or_404(ticket_id)  # 404s early if the ticket doesn't exist
+
+    update_data: dict[str, Any] = {}
+    if payload.status is not None:
+        new_status = payload.status.strip().lower()
+        if new_status not in ALLOWED_STATUSES:
+            raise HTTPException(status_code=400, detail=f"Status must be one of: {', '.join(sorted(ALLOWED_STATUSES))}")
+        update_data["status"] = new_status
+    if payload.priority is not None:
+        new_priority = payload.priority.strip().lower()
+        if new_priority not in ALLOWED_PRIORITIES:
+            raise HTTPException(status_code=400, detail=f"Priority must be one of: {', '.join(sorted(ALLOWED_PRIORITIES))}")
+        update_data["priority"] = new_priority
+
+    if not update_data:
+        raise HTTPException(status_code=400, detail="Provide at least a status or priority to update.")
+
+    from datetime import datetime
+
+    update_data["updated_at"] = datetime.utcnow().isoformat()
+    result = supabase.table("support_tickets").update(update_data).eq("id", ticket_id).execute()
+
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Support ticket not found.")
+
+    _log_admin_activity(
+        admin,
+        action="TICKET_UPDATE",
+        target_type="support_ticket",
+        target_id=ticket_id,
+        details=update_data,
+    )
+
+    return _to_ticket_response(result.data[0])

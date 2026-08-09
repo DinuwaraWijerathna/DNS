@@ -197,3 +197,44 @@ class UpdateProfileRequest(BaseModel):
 class ChangePasswordRequest(BaseModel):
     current_password: str
     new_password: str
+
+
+# ─── SUPPORT TICKETS ─────────────────────────────────────────
+
+class CreateSupportTicketRequest(BaseModel):
+    subject: str = Field(..., examples=["Cannot update my domain's IP address"])
+    message: str = Field(..., examples=["I keep getting a signature error when I try to update example.bd"])
+    priority: str = Field(default="normal", examples=["normal"])
+
+
+class UpdateSupportTicketRequest(BaseModel):
+    status: str | None = Field(default=None, examples=["in_progress"])
+    priority: str | None = Field(default=None, examples=["high"])
+
+
+class AddTicketReplyRequest(BaseModel):
+    message: str = Field(..., examples=["Thanks for the details — please try re-signing with your latest key."])
+
+
+class SupportTicketReply(BaseModel):
+    id: str
+    ticket_id: str
+    author_id: str | None = None
+    author_name: str | None = None
+    author_role: str | None = None
+    message: str
+    created_at: str | None = None
+
+
+class SupportTicketResponse(BaseModel):
+    ticket_id: str
+    user_id: str | None = None
+    user_name: str | None = None
+    user_email: str | None = None
+    subject: str
+    message: str
+    status: str = "open"
+    priority: str = "normal"
+    created_at: str | None = None
+    updated_at: str | None = None
+    replies: list[SupportTicketReply] = Field(default_factory=list)

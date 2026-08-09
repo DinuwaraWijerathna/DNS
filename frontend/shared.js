@@ -27,7 +27,9 @@ const PAGE_FILES = {
   domainModeration: "/admin/admin-domain-moderation.html",
   adminAuditTrail: "/admin/admin-audit-trail.html",
   adminPayments: "/admin/admin-payments.html",
-  adminActivityLog: "/admin/admin-activity-log.html"
+  adminActivityLog: "/admin/admin-activity-log.html",
+  adminSupportTickets: "/admin/admin-support-tickets.html",
+  supportTickets: "/customer/support-tickets.html"
 };
 
 // Pages where footer should appear
@@ -40,14 +42,15 @@ const PROTECTED_PAGES = [
   "updateDomain","transferDomain","domainDetails","auditHistory","systemMetrics",
   "customerDashboardOverview","adminDashboardOverview",
   "adminUsers","domainModeration","adminAuditTrail","adminPayments","adminActivityLog",
+  "adminSupportTickets","supportTickets",
   "myProfile"
 ];
 
 // Pages only an admin account is allowed to open (checked in guardProtectedPage)
-const ADMIN_ONLY_PAGES = ["adminDashboardOverview","adminUsers","domainModeration","adminAuditTrail","domainDetails","auditHistory","systemMetrics","adminPayments","adminActivityLog"];
+const ADMIN_ONLY_PAGES = ["adminDashboardOverview","adminUsers","domainModeration","adminAuditTrail","domainDetails","auditHistory","systemMetrics","adminPayments","adminActivityLog","adminSupportTickets"];
 
 // Pages that belong to the customer workflow only - an admin account is redirected away from these
-const CUSTOMER_ONLY_PAGES = ["customerDashboardOverview","domainRegister","myDomains","updateDomain","transferDomain","resolve","domains","blockchain","monitoring","security"];
+const CUSTOMER_ONLY_PAGES = ["customerDashboardOverview","domainRegister","myDomains","updateDomain","transferDomain","resolve","domains","blockchain","monitoring","security","supportTickets"];
 
 // ─── SESSION ───────────────────────────────────────────────
 function saveSession(user){ localStorage.setItem("bdns_user", JSON.stringify(user)); }
@@ -145,6 +148,7 @@ function renderSidebar(role){
       <button data-page="adminAuditTrail"        onclick="navigateTo('adminAuditTrail')">Global Audit Trail</button>
       <button data-page="adminPayments"          onclick="navigateTo('adminPayments')">Payment History</button>
       <button data-page="adminActivityLog"       onclick="navigateTo('adminActivityLog')">Admin Activity Log</button>
+      <button data-page="adminSupportTickets"    onclick="navigateTo('adminSupportTickets')">Support Tickets</button>
     `;
   } else {
     nav.innerHTML = `
@@ -158,6 +162,7 @@ function renderSidebar(role){
       <button data-page="blockchain"                onclick="navigateTo('blockchain')">Blockchain Ledger</button>
       <button data-page="monitoring"                onclick="navigateTo('monitoring')">Security Monitoring</button>
       <button data-page="security"                  onclick="navigateTo('security')">Security Simulation</button>
+      <button data-page="supportTickets"            onclick="navigateTo('supportTickets')">Support Tickets</button>
       <button data-page="pricing"                   onclick="navigateTo('pricing')">Upgrade Plan</button>
     `;
   }
@@ -1250,6 +1255,242 @@ function filterActivityLogByAdmin(){
   });
 }
 
+// ─── SUPPORT TICKETS: shared helpers ──────────────────────────
+function ticketStatusBadgeClass(status){
+  if(status === "closed") return "badge";
+  if(status === "in_progress") return "badge warn";
+  return "badge ok"; // open
+}
+
+function ticketPriorityLabel(priority){
+  return (priority || "normal").replace(/^\w/, c => c.toUpperCase());
+}
+
+function renderTicketReplies(replies){
+  if(!Array.isArray(replies) || replies.length === 0){
+    return `<p class="muted">No replies yet.</p>`;
+  }
+  return replies.map(r => `
+    <div class="ticket-reply">
+      <strong>${r.author_name || (r.author_role === "admin" ? "Support Team" : "You")}</strong>
+      <span class="muted"> · ${r.created_at ? new Date(r.created_at).toLocaleString() : ""}</span>
+      <p>${r.message}</p>
+    </div>
+  `).join("");
+}
+
+// ─── SUPPORT TICKETS: customer side ───────────────────────────
+async function submitSupportTicket(){
+  const subject = (document.getElementById("ticketSubject")?.value || "").trim();
+  const message = (document.getElementById("ticketMessage")?.value || "").trim();
+  const priority = document.getElementById("ticketPriority")?.value || "normal";
+
+  if(!subject || !message){ notify("Please fill in both subject and message."); return; }
+
+  try{
+    const result = await apiPost("/api/v1/tickets", { subject, message, priority });
+    if(result.detail || result.error) throw new Error(result.detail || result.error);
+
+    notify("Support ticket submitted.");
+    document.getElementById("ticketSubject").value = "";
+    document.getElementById("ticketMessage").value = "";
+    await loadMyTickets();
+  }catch(e){
+    notify("Could not submit ticket: " + e.message);
+  }
+}
+
+async function loadMyTickets(){
+  const list = document.getElementById("myTicketsList");
+  if(!list) return;
+  list.innerHTML = `<p class="muted">Loading your tickets...</p>`;
+
+  try{
+    const tickets = await apiGet("/api/v1/tickets/mine");
+    if(!Array.isArray(tickets)) throw new Error(tickets.detail || tickets.error || "Unexpected response.");
+
+    if(tickets.length === 0){
+      list.innerHTML = `<p class="muted">You haven't raised any support tickets yet.</p>`;
+      return;
+    }
+
+    list.innerHTML = tickets.map(t => `
+      <div class="ticket-card" onclick="openMyTicket('${t.ticket_id}')">
+        <div class="ticket-card-head">
+          <strong>${t.subject}</strong>
+          <span class="${ticketStatusBadgeClass(t.status)}">${t.status.replace('_',' ')}</span>
+        </div>
+        <p class="muted">${ticketPriorityLabel(t.priority)} priority · ${t.created_at ? new Date(t.created_at).toLocaleString() : ''}</p>
+      </div>
+    `).join("");
+  }catch(e){
+    list.innerHTML = `<p class="muted">Could not load your tickets: ${e.message}</p>`;
+  }
+}
+
+let _openTicketId = null;
+
+async function openMyTicket(ticketId){
+  _openTicketId = ticketId;
+  const panel = document.getElementById("myTicketDetail");
+  if(!panel) return;
+  panel.style.display = "block";
+  panel.innerHTML = `<p class="muted">Loading...</p>`;
+
+  try{
+    const t = await apiGet(`/api/v1/tickets/${ticketId}`);
+    if(t.detail || t.error) throw new Error(t.detail || t.error);
+
+    panel.innerHTML = `
+      <h3>${t.subject}</h3>
+      <p class="muted">${ticketPriorityLabel(t.priority)} priority · <span class="${ticketStatusBadgeClass(t.status)}">${t.status.replace('_',' ')}</span></p>
+      <p>${t.message}</p>
+      <div class="ticket-thread">${renderTicketReplies(t.replies)}</div>
+      <label>Add a reply</label>
+      <textarea id="myTicketReplyBox" rows="3" placeholder="Type your reply..."></textarea>
+      <button class="primary" onclick="sendMyTicketReply()">Send Reply</button>
+    `;
+  }catch(e){
+    panel.innerHTML = `<p class="muted">Could not load ticket: ${e.message}</p>`;
+  }
+}
+
+async function sendMyTicketReply(){
+  const box = document.getElementById("myTicketReplyBox");
+  const message = (box?.value || "").trim();
+  if(!message || !_openTicketId) return;
+
+  try{
+    const result = await apiPost(`/api/v1/tickets/${_openTicketId}/replies`, { message });
+    if(result.detail || result.error) throw new Error(result.detail || result.error);
+    notify("Reply sent.");
+    await openMyTicket(_openTicketId);
+    await loadMyTickets();
+  }catch(e){
+    notify("Could not send reply: " + e.message);
+  }
+}
+
+// ─── SUPPORT TICKETS: admin side ──────────────────────────────
+async function loadAdminTickets(){
+  const table = document.getElementById("adminTicketsTable");
+  if(!table) return;
+
+  const statusFilter = document.getElementById("adminTicketStatusFilter")?.value || "";
+  const priorityFilter = document.getElementById("adminTicketPriorityFilter")?.value || "";
+
+  try{
+    let path = "/api/v1/admin/tickets";
+    const params = [];
+    if(statusFilter) params.push(`status_filter=${encodeURIComponent(statusFilter)}`);
+    if(priorityFilter) params.push(`priority=${encodeURIComponent(priorityFilter)}`);
+    if(params.length) path += "?" + params.join("&");
+
+    const tickets = await apiGet(path);
+    if(!Array.isArray(tickets)) throw new Error(tickets.detail || tickets.error || "Unexpected response.");
+
+    const countEl = document.getElementById("adminTicketsCount");
+    if(countEl) countEl.textContent = tickets.length;
+
+    table.innerHTML = "";
+    if(tickets.length === 0){ table.innerHTML = `<tr><td colspan="6">No support tickets found.</td></tr>`; return; }
+
+    tickets.forEach(t => {
+      table.innerHTML += `<tr>
+        <td>${t.created_at ? new Date(t.created_at).toLocaleString() : "-"}</td>
+        <td>${t.user_name || t.user_email || "-"}</td>
+        <td>${t.subject}</td>
+        <td>${ticketPriorityLabel(t.priority)}</td>
+        <td><span class="${ticketStatusBadgeClass(t.status)}">${t.status.replace('_',' ')}</span></td>
+        <td><button class="secondary" onclick="openAdminTicket('${t.ticket_id}')">View</button></td>
+      </tr>`;
+    });
+  }catch(e){
+    table.innerHTML = `<tr><td colspan="6">Could not load tickets: ${e.message}</td></tr>`;
+  }
+}
+
+let _openAdminTicketId = null;
+
+async function openAdminTicket(ticketId){
+  _openAdminTicketId = ticketId;
+  const panel = document.getElementById("adminTicketDetail");
+  if(!panel) return;
+  panel.style.display = "block";
+  panel.innerHTML = `<p class="muted">Loading...</p>`;
+
+  try{
+    const t = await apiGet(`/api/v1/tickets/${ticketId}`);
+    if(t.detail || t.error) throw new Error(t.detail || t.error);
+
+    panel.innerHTML = `
+      <h3>${t.subject}</h3>
+      <p class="muted">From ${t.user_name || t.user_email || "unknown user"} · ${ticketPriorityLabel(t.priority)} priority</p>
+      <p>${t.message}</p>
+
+      <div class="form-grid-2">
+        <div>
+          <label>Status</label>
+          <select id="adminTicketStatusSelect">
+            <option value="open" ${t.status === 'open' ? 'selected' : ''}>Open</option>
+            <option value="in_progress" ${t.status === 'in_progress' ? 'selected' : ''}>In Progress</option>
+            <option value="closed" ${t.status === 'closed' ? 'selected' : ''}>Closed</option>
+          </select>
+        </div>
+        <div>
+          <label>Priority</label>
+          <select id="adminTicketPrioritySelect">
+            <option value="low" ${t.priority === 'low' ? 'selected' : ''}>Low</option>
+            <option value="normal" ${t.priority === 'normal' ? 'selected' : ''}>Normal</option>
+            <option value="high" ${t.priority === 'high' ? 'selected' : ''}>High</option>
+            <option value="urgent" ${t.priority === 'urgent' ? 'selected' : ''}>Urgent</option>
+          </select>
+        </div>
+      </div>
+      <button class="primary" onclick="updateAdminTicket()">Save Status &amp; Priority</button>
+
+      <div class="ticket-thread">${renderTicketReplies(t.replies)}</div>
+      <label>Reply to customer</label>
+      <textarea id="adminTicketReplyBox" rows="3" placeholder="Type your reply..."></textarea>
+      <button class="primary" onclick="sendAdminTicketReply()">Send Reply</button>
+    `;
+  }catch(e){
+    panel.innerHTML = `<p class="muted">Could not load ticket: ${e.message}</p>`;
+  }
+}
+
+async function updateAdminTicket(){
+  if(!_openAdminTicketId) return;
+  const status = document.getElementById("adminTicketStatusSelect")?.value;
+  const priority = document.getElementById("adminTicketPrioritySelect")?.value;
+
+  try{
+    const result = await apiPut(`/api/v1/admin/tickets/${_openAdminTicketId}`, { status, priority });
+    if(result.detail || result.error) throw new Error(result.detail || result.error);
+    notify("Ticket updated.");
+    await openAdminTicket(_openAdminTicketId);
+    await loadAdminTickets();
+  }catch(e){
+    notify("Could not update ticket: " + e.message);
+  }
+}
+
+async function sendAdminTicketReply(){
+  const box = document.getElementById("adminTicketReplyBox");
+  const message = (box?.value || "").trim();
+  if(!message || !_openAdminTicketId) return;
+
+  try{
+    const result = await apiPost(`/api/v1/tickets/${_openAdminTicketId}/replies`, { message });
+    if(result.detail || result.error) throw new Error(result.detail || result.error);
+    notify("Reply sent.");
+    await openAdminTicket(_openAdminTicketId);
+    await loadAdminTickets();
+  }catch(e){
+    notify("Could not send reply: " + e.message);
+  }
+}
+
 // ─── PER-PAGE BOOTSTRAP ─────────────────────────────────────
 // Call this once at the bottom of every page, passing that page's id.
 async function loadSystemMetrics(){
@@ -1397,5 +1638,11 @@ function initPage(pageId){
   }
   if(pageId === "adminActivityLog"){
     loadAdminActivityLog();
+  }
+  if(pageId === "supportTickets"){
+    loadMyTickets();
+  }
+  if(pageId === "adminSupportTickets"){
+    loadAdminTickets();
   }
 }
