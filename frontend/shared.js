@@ -949,12 +949,22 @@ async function loadDomainDetails(){
   }
 }
 
-function loadAuditHistory(){
+async function loadAuditHistory(){
   const domain = document.getElementById("auditDomainName").value.trim().toLowerCase();
   if(!domain){ show("auditHistoryOutput", { error:"Please enter a domain name." }); return; }
-  const logs = auditLogs.filter(log => JSON.stringify(log.details).toLowerCase().includes(domain));
-  show("auditHistoryOutput", { domain, total_events: logs.length, history: logs });
-  notify("Audit history loaded.");
+  try{
+    const history = await apiGet("/api/v1/domains/" + encodeURIComponent(domain) + "/history");
+    if(history.detail || history.error){
+      show("auditHistoryOutput", { error: history.detail || history.error });
+      notify(history.detail || history.error);
+      return;
+    }
+    show("auditHistoryOutput", { domain, total_events: history.length, history });
+    notify("Audit history loaded.");
+  }catch(e){
+    show("auditHistoryOutput", { error: "Could not load audit history." });
+    notify("Could not load audit history.");
+  }
 }
 
 function loadSystemMetrics(){
@@ -1188,6 +1198,30 @@ function filterGlobalAuditByDomain(){
 
 // ─── PER-PAGE BOOTSTRAP ─────────────────────────────────────
 // Call this once at the bottom of every page, passing that page's id.
+async function loadSystemMetrics(){
+  const out = document.getElementById("metricsOutput");
+  try{
+    const data = await apiGet("/api/v1/resolver/metrics/summary");
+    if(data.detail || data.error){
+      if(out) show("metricsOutput", data);
+      notify(data.detail || data.error);
+      return;
+    }
+    const mTotal  = document.getElementById("mTotal");
+    const mHits   = document.getElementById("mHits");
+    const mMisses = document.getElementById("mMisses");
+    const mRate   = document.getElementById("mRate");
+    if(mTotal)  mTotal.textContent  = data.total_queries;
+    if(mHits)   mHits.textContent   = data.cache_hits;
+    if(mMisses) mMisses.textContent = data.cache_misses;
+    if(mRate)   mRate.textContent   = Math.round(data.cache_hit_rate * 100) / 100 + "%";
+    if(out) show("metricsOutput", data);
+  }catch(e){
+    notify("Could not load system metrics.");
+    if(out) show("metricsOutput", { error: "Could not load system metrics." });
+  }
+}
+
 function initPage(pageId){
   if(!guardProtectedPage(pageId)) return;
 
@@ -1235,5 +1269,8 @@ function initPage(pageId){
   }
   if(pageId === "myProfile"){
     loadProfile();
+  }
+  if(pageId === "systemMetrics"){
+    loadSystemMetrics();
   }
 }

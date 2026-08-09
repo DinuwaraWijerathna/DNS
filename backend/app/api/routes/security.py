@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 from datetime import UTC, datetime
 from typing import Any
 
@@ -51,7 +52,7 @@ def simulate_dns_spoofing(payload: SpoofingSimulationRequest, request: Request) 
             detail="Register the domain first, then run the spoofing simulation.",
         ) from exc
 
-    attacker_key = SigningKey.generate(curve=NIST256p)
+    attacker_key = SigningKey.generate(curve=NIST256p, hashfunc=hashlib.sha256)
     attacker_public_key = attacker_key.verifying_key.to_string().hex()
     attacker_payload = {"ip": payload.malicious_ip}
     message = SignatureService.build_signing_message(
