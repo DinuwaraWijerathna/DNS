@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from app.core.security import require_admin
 from app.core.supabase_client import supabase
 from app.models.schemas import (
+    AdminActivityLogResponse,
     AdminFreezeRequest,
     AdminPaymentResponse,
     AdminPaymentSummaryResponse,
@@ -33,6 +34,30 @@ def _service_from_request(request: Request) -> DomainService:
     if service is None:
         raise HTTPException(status_code=503, detail="Domain service is not initialized.")
     return service
+
+
+def _log_admin_activity(
+    admin: dict,
+    action: str,
+    target_type: str | None = None,
+    target_id: str | None = None,
+    details: dict[str, Any] | None = None,
+) -> None:
+    """Best-effort write to admin_activity_log. Never blocks the main request."""
+    try:
+        supabase.table("admin_activity_log").insert(
+            {
+                "admin_id": admin.get("user_id"),
+                "action": action,
+                "target_type": target_type,
+                "target_id": target_id,
+                "details": details or {},
+            }
+        ).execute()
+    except Exception:
+        # Table may not exist yet, or Supabase may be briefly unavailable.
+        # Activity logging must never break the admin action itself.
+        pass
 
 
 # ─── USER MANAGEMENT ───────────────────────────────────────────
@@ -86,6 +111,14 @@ def set_user_status(
             ),
         )
 
+    _log_admin_activity(
+        admin,
+        action="USER_STATUS_CHANGE",
+        target_type="user",
+        target_id=user_id,
+        details={"new_status": new_status},
+    )
+
     return {"message": f"User status updated to '{new_status}'.", "user_id": user_id, "status": new_status}
 
 
@@ -106,6 +139,14 @@ def freeze_domain(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except DomainAlreadyFrozenError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+    _log_admin_activity(
+        admin,
+        action="DOMAIN_FREEZE",
+        target_type="domain",
+        target_id=domain,
+        details={"reason": payload.reason, "tx_id": result.tx_id},
+    )
 
     return DomainMutationResponse(
         tx_id=result.tx_id,
@@ -130,6 +171,14 @@ def unfreeze_domain(
     except DomainAlreadyActiveError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 
+    _log_admin_activity(
+        admin,
+        action="DOMAIN_UNFREEZE",
+        target_type="domain",
+        target_id=domain,
+        details={"reason": payload.reason, "tx_id": result.tx_id},
+    )
+
     return DomainMutationResponse(
         tx_id=result.tx_id,
         block_hash=result.block_hash,
@@ -147,6 +196,59 @@ def global_audit_trail(
 ) -> list[GlobalAuditEvent]:
     service = _service_from_request(request)
     return [GlobalAuditEvent(**event) for event in service.get_global_audit_trail(limit=limit)]
+
+
+# ─── ADMIN ACTIVITY LOG ─────────────────────────────────────────
+
+@router.get("/activity", response_model=list[AdminActivityLogResponse])
+def admin_activity_log(
+    admin: dict = Depends(require_admin),
+    admin_id: str | None = None,
+    action: str | None = None,
+    limit: int = 200,
+) -> list[AdminActivityLogResponse]:
+    query = supabase.table("admin_activity_log").select("*")
+    if admin_id:
+        query = query.eq("admin_id", admin_id)
+    if action:
+        query = query.eq("action", action.upper())
+
+    try:
+        result = query.execute()
+    except Exception as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "admin_activity_log table not found. Run supabase_schema.sql "
+                "(admin_activity_log section) in the Supabase SQL editor."
+            ),
+        ) from exc
+
+    logs: list[dict[str, Any]] = result.data or []
+    logs.sort(key=lambda entry: str(entry.get("created_at") or ""), reverse=True)
+    logs = logs[:limit]
+
+    admin_ids = {str(entry.get("admin_id")) for entry in logs if entry.get("admin_id")}
+    admins_by_id: dict[str, dict[str, Any]] = {}
+    if admin_ids:
+        users_result = supabase.table("users").select("id,full_name,email").in_("id", list(admin_ids)).execute()
+        for u in users_result.data or []:
+            admins_by_id[str(u.get("id"))] = u
+
+    return [
+        AdminActivityLogResponse(
+            id=str(entry.get("id")),
+            admin_id=str(entry.get("admin_id")) if entry.get("admin_id") else None,
+            admin_name=admins_by_id.get(str(entry.get("admin_id")), {}).get("full_name"),
+            admin_email=admins_by_id.get(str(entry.get("admin_id")), {}).get("email"),
+            action=entry.get("action") or "",
+            target_type=entry.get("target_type"),
+            target_id=entry.get("target_id"),
+            details=entry.get("details") or {},
+            created_at=str(entry.get("created_at")) if entry.get("created_at") else None,
+        )
+        for entry in logs
+    ]
 
 
 # ─── ADMIN STATS (drives the admin dashboard overview) ─────────

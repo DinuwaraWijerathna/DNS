@@ -138,6 +138,20 @@ class AdminStatsResponse(BaseModel):
     customer_count: int
 
 
+# ─── ADMIN ACTIVITY LOG ──────────────────────────────────────
+
+class AdminActivityLogResponse(BaseModel):
+    id: str
+    admin_id: str | None = None
+    admin_name: str | None = None
+    admin_email: str | None = None
+    action: str
+    target_type: str | None = None
+    target_id: str | None = None
+    details: dict[str, Any] | None = None
+    created_at: str | None = None
+
+
 # ─── ADMIN PAYMENT HISTORY ──────────────────────────────────
 
 class AdminPaymentResponse(BaseModel):

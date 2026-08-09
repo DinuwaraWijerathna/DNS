@@ -26,7 +26,8 @@ const PAGE_FILES = {
   adminUsers: "/admin/admin-users.html",
   domainModeration: "/admin/admin-domain-moderation.html",
   adminAuditTrail: "/admin/admin-audit-trail.html",
-  adminPayments: "/admin/admin-payments.html"
+  adminPayments: "/admin/admin-payments.html",
+  adminActivityLog: "/admin/admin-activity-log.html"
 };
 
 // Pages where footer should appear
@@ -38,12 +39,12 @@ const PROTECTED_PAGES = [
   "blockchain","monitoring","security",
   "updateDomain","transferDomain","domainDetails","auditHistory","systemMetrics",
   "customerDashboardOverview","adminDashboardOverview",
-  "adminUsers","domainModeration","adminAuditTrail","adminPayments",
+  "adminUsers","domainModeration","adminAuditTrail","adminPayments","adminActivityLog",
   "myProfile"
 ];
 
 // Pages only an admin account is allowed to open (checked in guardProtectedPage)
-const ADMIN_ONLY_PAGES = ["adminDashboardOverview","adminUsers","domainModeration","adminAuditTrail","domainDetails","auditHistory","systemMetrics","adminPayments"];
+const ADMIN_ONLY_PAGES = ["adminDashboardOverview","adminUsers","domainModeration","adminAuditTrail","domainDetails","auditHistory","systemMetrics","adminPayments","adminActivityLog"];
 
 // Pages that belong to the customer workflow only - an admin account is redirected away from these
 const CUSTOMER_ONLY_PAGES = ["customerDashboardOverview","domainRegister","myDomains","updateDomain","transferDomain","resolve","domains","blockchain","monitoring","security"];
@@ -143,6 +144,7 @@ function renderSidebar(role){
       <button data-page="domainModeration"       onclick="navigateTo('domainModeration')">Domain Moderation</button>
       <button data-page="adminAuditTrail"        onclick="navigateTo('adminAuditTrail')">Global Audit Trail</button>
       <button data-page="adminPayments"          onclick="navigateTo('adminPayments')">Payment History</button>
+      <button data-page="adminActivityLog"       onclick="navigateTo('adminActivityLog')">Admin Activity Log</button>
     `;
   } else {
     nav.innerHTML = `
@@ -1199,6 +1201,55 @@ function filterGlobalAuditByDomain(){
   });
 }
 
+// ─── ADMIN: ADMIN ACTIVITY LOG ────────────────────────────────
+async function loadAdminActivityLog(){
+  const table = document.getElementById("adminActivityLogTable");
+  const actionFilter = document.getElementById("activityActionFilter")?.value || "";
+
+  try{
+    let path = "/api/v1/admin/activity";
+    if(actionFilter) path += `?action=${encodeURIComponent(actionFilter)}`;
+
+    const logs = await apiGet(path);
+    if(!Array.isArray(logs)) throw new Error(logs.detail || logs.error || "Unexpected response.");
+
+    const countEl = document.getElementById("activityLogCount");
+    if(countEl) countEl.textContent = logs.length;
+
+    if(!table) return;
+    table.innerHTML = "";
+    if(logs.length === 0){ table.innerHTML = `<tr><td colspan="5">No admin actions recorded yet.</td></tr>`; return; }
+
+    logs.forEach(log => {
+      const who = log.admin_name || log.admin_email || (log.admin_id ? shortText(log.admin_id) : "Unknown");
+      const target = log.target_type ? `${log.target_type}: ${log.target_id || "-"}` : "-";
+      const details = log.details && Object.keys(log.details).length
+        ? Object.entries(log.details).map(([k,v]) => `${k}=${v}`).join(", ")
+        : "-";
+      const when = log.created_at ? new Date(log.created_at).toLocaleString() : "-";
+
+      table.innerHTML += `<tr data-admin="${(who || "").toLowerCase()}">
+        <td>${when}</td>
+        <td>${who}</td>
+        <td><span class="badge ok">${log.action}</span></td>
+        <td>${target}</td>
+        <td>${details}</td>
+      </tr>`;
+    });
+  }catch(e){
+    if(table) table.innerHTML = `<tr><td colspan="5">Could not load activity log: ${e.message}</td></tr>`;
+  }
+}
+
+function filterActivityLogByAdmin(){
+  const filter = (document.getElementById("activityAdminFilter")?.value || "").trim().toLowerCase();
+  const rows = document.querySelectorAll("#adminActivityLogTable tr");
+  rows.forEach(row => {
+    const who = row.getAttribute("data-admin") || "";
+    row.style.display = who.includes(filter) ? "" : "none";
+  });
+}
+
 // ─── PER-PAGE BOOTSTRAP ─────────────────────────────────────
 // Call this once at the bottom of every page, passing that page's id.
 async function loadSystemMetrics(){
@@ -1343,5 +1394,8 @@ function initPage(pageId){
   }
   if(pageId === "adminPayments"){
     loadAdminPayments();
+  }
+  if(pageId === "adminActivityLog"){
+    loadAdminActivityLog();
   }
 }
