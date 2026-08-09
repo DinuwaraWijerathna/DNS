@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Payment History | BDNS</title>
+<link rel="stylesheet" href="/shared.css" />
+<link rel="stylesheet" href="/admin/admin-theme.css" />
+</head>
+<body class="public-mode admin-scope">
+
+<div class="toast-area" id="toastArea"></div>
+
+<header class="site-header">
+  <div class="site-logo" onclick="navigateTo('overview')">
+  <img src="/logo.png" alt="SecureDNS Logo">
+</div>
+
+  <!-- Public nav (not logged in) -->
+  <nav class="site-nav-public" id="navPublic">
+    <button onclick="navigateTo('pricing')">Pricing</button>
+    <button onclick="navigateTo('registerUser')">Register</button>
+    <button onclick="navigateTo('login')">Log In</button>
+  </nav>
+
+  <!-- Auth nav (logged in) -->
+  <nav class="site-nav-auth" id="navAuth">
+    <span class="user-pill" id="currentUser" onclick="showProfile()">Guest</span>
+    <button class="logout-btn" onclick="logout()">Logout</button>
+  </nav>
+</header>
+
+<div class="app">
+
+  <aside class="sidebar">
+    <div class="sidebar-title">Navigation</div>
+    <div class="nav" id="sidebarNav"></div>
+    <div class="sidebar-footer">BDNS Enterprise Security Platform</div>
+  </aside>
+
+  <main class="main">
+    <div class="content">
+      <section id="adminPayments" class="page active">
+        <div class="hero">
+          <h1>Payment History</h1>
+          <p>Every PayPal transaction captured across all customers, with revenue totals by plan and currency.</p>
+        </div>
+
+        <div class="cards">
+          <div class="card"><small>TOTAL PAYMENTS</small><h2 id="paymentsTotalCount">0</h2></div>
+          <div class="card"><small>COMPLETED</small><h2 id="paymentsCompletedCount">0</h2></div>
+          <div class="card"><small>TOTAL REVENUE</small><h2 id="paymentsTotalRevenue">$0</h2></div>
+        </div>
+
+        <div class="panel">
+          <h2>Revenue Breakdown</h2>
+          <p>Completed payments only, grouped by plan and currency.</p>
+          <div class="form-grid-2">
+            <div>
+              <label>By Plan</label>
+              <pre id="paymentsByPlan">-</pre>
+            </div>
+            <div>
+              <label>By Currency</label>
+              <pre id="paymentsByCurrency">-</pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>All Transactions</h2>
+
+          <div class="form-grid-2">
+            <div>
+              <label>Filter by Status</label>
+              <select id="paymentsStatusFilter">
+                <option value="">All statuses</option>
+                <option value="COMPLETED">Completed</option>
+                <option value="DECLINED">Declined</option>
+                <option value="FAILED">Failed</option>
+              </select>
+            </div>
+            <div>
+              <label>Filter by Plan</label>
+              <select id="paymentsPlanFilter">
+                <option value="">All plans</option>
+                <option value="starter">Starter</option>
+                <option value="pro">Pro</option>
+                <option value="enterprise">Enterprise</option>
+              </select>
+            </div>
+          </div>
+
+          <button class="primary" onclick="loadAdminPayments()">Refresh Payments</button>
+
+          <table>
+            <thead><tr><th>Date</th><th>Customer Email</th><th>Plan</th><th>Amount</th><th>Status</th><th>PayPal Order ID</th></tr></thead>
+            <tbody id="adminPaymentTable"><tr><td colspan="6">Loading payments...</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+<footer class="footer" id="siteFooter" style="display:none">
+      <div class="footer-cta" id="footerCta">
+        <h2>Ready to secure your DNS infrastructure?</h2>
+        <p>Protect your domains with blockchain verification, cryptographic ownership validation, and real-time threat monitoring.</p>
+        <button onclick="navigateTo('getStarted')">Get Started Now</button>
+      </div>
+
+      <div class="footer-grid">
+        <div>
+          <div class="footer-logo" onclick="navigateTo('overview')">
+          <img src="/logo.png" alt="SecureDNS Logo">
+        </div>
+          <p>Blockchain-based DNS security platform designed to protect digital infrastructure from spoofing, tampering, and unauthorized DNS manipulation.</p>
+          <p>Secure DNS. Verified ownership. Real-time monitoring.</p>
+        </div>
+        <div>
+          <h4>Sitemap</h4>
+          <a onclick="navigateTo('overview')">Home</a>
+          <a onclick="navigateTo('pricing')">Pricing</a>
+          <a onclick="navigateTo('login')">Log In</a>
+          <a onclick="navigateTo('registerUser')">Register</a>
+          <a onclick="requireAuthThenGo('monitoring')">Security Monitoring</a>
+        </div>
+        <div>
+          <h4>Security Updates</h4>
+          <p>Receive blockchain DNS security insights and platform updates.</p>
+          <div class="footer-input-row">
+            <input id="footerEmail" placeholder="Your email">
+            <button onclick="subscribeFooter()">Sign Up</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <div>© 2026 BDNS Enterprise Security Platform. All rights reserved.</div>
+        <div>Blockchain DNS Security | Threat Monitoring | Audit Protection</div>
+      </div>
+    </footer>
+
+  </main>
+</div>
+
+
+<script src="/shared.js"></script>
+<script>initPage('adminPayments');</script>
+</body>
+</html>

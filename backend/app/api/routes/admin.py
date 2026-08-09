@@ -8,6 +8,8 @@ from app.core.security import require_admin
 from app.core.supabase_client import supabase
 from app.models.schemas import (
     AdminFreezeRequest,
+    AdminPaymentResponse,
+    AdminPaymentSummaryResponse,
     AdminStatsResponse,
     AdminUserResponse,
     AdminUserStatusRequest,
@@ -178,4 +180,71 @@ def admin_stats(request: Request, admin: dict = Depends(require_admin)) -> Admin
         total_security_events=total_security_events,
         admin_count=admin_count,
         customer_count=customer_count,
+    )
+
+
+# ─── PAYMENT HISTORY (admin-only view across every customer) ───
+
+@router.get("/payments", response_model=list[AdminPaymentResponse])
+def list_payments(
+    admin: dict = Depends(require_admin),
+    status_filter: str | None = None,
+    plan: str | None = None,
+    limit: int = 200,
+) -> list[AdminPaymentResponse]:
+    query = supabase.table("payments").select("*")
+    if status_filter:
+        query = query.eq("status", status_filter.upper())
+    if plan:
+        query = query.eq("plan", plan)
+
+    result = query.execute()
+    payments: list[dict[str, Any]] = result.data or []
+    payments.sort(key=lambda p: str(p.get("created_at") or ""), reverse=True)
+
+    return [
+        AdminPaymentResponse(
+            payment_id=str(p.get("id")),
+            user_email=p.get("user_email"),
+            plan=p.get("plan"),
+            amount=str(p.get("amount")) if p.get("amount") is not None else None,
+            currency=p.get("currency"),
+            paypal_order_id=p.get("paypal_order_id"),
+            status=p.get("status"),
+            created_at=str(p.get("created_at")) if p.get("created_at") else None,
+        )
+        for p in payments[:limit]
+    ]
+
+
+@router.get("/payments/summary", response_model=AdminPaymentSummaryResponse)
+def payments_summary(admin: dict = Depends(require_admin)) -> AdminPaymentSummaryResponse:
+    result = supabase.table("payments").select("*").execute()
+    payments: list[dict[str, Any]] = result.data or []
+
+    completed = [p for p in payments if (p.get("status") or "").upper() == "COMPLETED"]
+
+    revenue_by_currency: dict[str, float] = {}
+    revenue_by_plan: dict[str, float] = {}
+    total_revenue = 0.0
+
+    for p in completed:
+        try:
+            amount = float(p.get("amount") or 0)
+        except (TypeError, ValueError):
+            continue
+
+        currency = p.get("currency") or "UNKNOWN"
+        plan = p.get("plan") or "unknown"
+
+        total_revenue += amount
+        revenue_by_currency[currency] = revenue_by_currency.get(currency, 0.0) + amount
+        revenue_by_plan[plan] = revenue_by_plan.get(plan, 0.0) + amount
+
+    return AdminPaymentSummaryResponse(
+        total_payments=len(payments),
+        completed_payments=len(completed),
+        total_revenue=round(total_revenue, 2),
+        revenue_by_currency={k: round(v, 2) for k, v in revenue_by_currency.items()},
+        revenue_by_plan={k: round(v, 2) for k, v in revenue_by_plan.items()},
     )

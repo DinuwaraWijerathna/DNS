@@ -25,7 +25,8 @@ const PAGE_FILES = {
   monitoring: "/customer/security-monitoring.html",
   adminUsers: "/admin/admin-users.html",
   domainModeration: "/admin/admin-domain-moderation.html",
-  adminAuditTrail: "/admin/admin-audit-trail.html"
+  adminAuditTrail: "/admin/admin-audit-trail.html",
+  adminPayments: "/admin/admin-payments.html"
 };
 
 // Pages where footer should appear
@@ -37,12 +38,12 @@ const PROTECTED_PAGES = [
   "blockchain","monitoring","security",
   "updateDomain","transferDomain","domainDetails","auditHistory","systemMetrics",
   "customerDashboardOverview","adminDashboardOverview",
-  "adminUsers","domainModeration","adminAuditTrail",
+  "adminUsers","domainModeration","adminAuditTrail","adminPayments",
   "myProfile"
 ];
 
 // Pages only an admin account is allowed to open (checked in guardProtectedPage)
-const ADMIN_ONLY_PAGES = ["adminDashboardOverview","adminUsers","domainModeration","adminAuditTrail","domainDetails","auditHistory","systemMetrics"];
+const ADMIN_ONLY_PAGES = ["adminDashboardOverview","adminUsers","domainModeration","adminAuditTrail","domainDetails","auditHistory","systemMetrics","adminPayments"];
 
 // Pages that belong to the customer workflow only - an admin account is redirected away from these
 const CUSTOMER_ONLY_PAGES = ["customerDashboardOverview","domainRegister","myDomains","updateDomain","transferDomain","resolve","domains","blockchain","monitoring","security"];
@@ -141,6 +142,7 @@ function renderSidebar(role){
       <button data-page="adminUsers"             onclick="navigateTo('adminUsers')">User Management</button>
       <button data-page="domainModeration"       onclick="navigateTo('domainModeration')">Domain Moderation</button>
       <button data-page="adminAuditTrail"        onclick="navigateTo('adminAuditTrail')">Global Audit Trail</button>
+      <button data-page="adminPayments"          onclick="navigateTo('adminPayments')">Payment History</button>
     `;
   } else {
     nav.innerHTML = `
@@ -154,6 +156,7 @@ function renderSidebar(role){
       <button data-page="blockchain"                onclick="navigateTo('blockchain')">Blockchain Ledger</button>
       <button data-page="monitoring"                onclick="navigateTo('monitoring')">Security Monitoring</button>
       <button data-page="security"                  onclick="navigateTo('security')">Security Simulation</button>
+      <button data-page="pricing"                   onclick="navigateTo('pricing')">Upgrade Plan</button>
     `;
   }
 }
@@ -1222,6 +1225,71 @@ async function loadSystemMetrics(){
   }
 }
 
+async function loadAdminPayments(){
+  const table = document.getElementById("adminPaymentTable");
+  const statusFilter = document.getElementById("paymentsStatusFilter");
+  const planFilter = document.getElementById("paymentsPlanFilter");
+
+  try{
+    let path = "/api/v1/admin/payments";
+    const params = [];
+    if(statusFilter && statusFilter.value) params.push("status_filter=" + encodeURIComponent(statusFilter.value));
+    if(planFilter && planFilter.value) params.push("plan=" + encodeURIComponent(planFilter.value));
+    if(params.length) path += "?" + params.join("&");
+
+    const payments = await apiGet(path);
+    if(!Array.isArray(payments)) throw new Error(payments.detail || payments.error || "Unexpected response.");
+
+    if(table){
+      table.innerHTML = "";
+      if(payments.length === 0){
+        table.innerHTML = `<tr><td colspan="6">No payments found.</td></tr>`;
+      }else{
+        payments.forEach(p => {
+          const s = (p.status || "").toUpperCase();
+          const badgeClass = s === "COMPLETED" ? "badge ok" : (s === "DECLINED" || s === "FAILED" ? "badge danger" : "badge");
+          table.innerHTML += `<tr>
+            <td>${p.created_at ? new Date(p.created_at).toLocaleString() : "-"}</td>
+            <td>${p.user_email || "-"}</td>
+            <td>${p.plan || "-"}</td>
+            <td>${p.amount ? p.amount + " " + (p.currency || "") : "-"}</td>
+            <td><span class="${badgeClass}">${p.status || "UNKNOWN"}</span></td>
+            <td>${p.paypal_order_id || "-"}</td>
+          </tr>`;
+        });
+      }
+    }
+
+    await loadAdminPaymentsSummary();
+  }catch(e){
+    if(table) table.innerHTML = `<tr><td colspan="6">Could not load payments.</td></tr>`;
+    notify("Could not load payment history.");
+  }
+}
+
+async function loadAdminPaymentsSummary(){
+  try{
+    const summary = await apiGet("/api/v1/admin/payments/summary");
+    if(summary.detail || summary.error) return;
+
+    const totalCount = document.getElementById("paymentsTotalCount");
+    const completedCount = document.getElementById("paymentsCompletedCount");
+    const totalRevenue = document.getElementById("paymentsTotalRevenue");
+    const byPlan = document.getElementById("paymentsByPlan");
+    const byCurrency = document.getElementById("paymentsByCurrency");
+
+    if(totalCount) totalCount.textContent = summary.total_payments;
+    if(completedCount) completedCount.textContent = summary.completed_payments;
+    if(totalRevenue) totalRevenue.textContent = "$" + summary.total_revenue;
+    if(byPlan) byPlan.textContent = Object.keys(summary.revenue_by_plan).length
+      ? Object.entries(summary.revenue_by_plan).map(([k,v]) => `${k}: ${v}`).join("\n")
+      : "No completed payments yet.";
+    if(byCurrency) byCurrency.textContent = Object.keys(summary.revenue_by_currency).length
+      ? Object.entries(summary.revenue_by_currency).map(([k,v]) => `${k}: ${v}`).join("\n")
+      : "No completed payments yet.";
+  }catch(e){ /* summary is supplementary; ignore failures quietly */ }
+}
+
 function initPage(pageId){
   if(!guardProtectedPage(pageId)) return;
 
@@ -1272,5 +1340,8 @@ function initPage(pageId){
   }
   if(pageId === "systemMetrics"){
     loadSystemMetrics();
+  }
+  if(pageId === "adminPayments"){
+    loadAdminPayments();
   }
 }

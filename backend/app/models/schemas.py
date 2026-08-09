@@ -138,6 +138,27 @@ class AdminStatsResponse(BaseModel):
     customer_count: int
 
 
+# ─── ADMIN PAYMENT HISTORY ──────────────────────────────────
+
+class AdminPaymentResponse(BaseModel):
+    payment_id: str
+    user_email: str | None = None
+    plan: str | None = None
+    amount: str | None = None
+    currency: str | None = None
+    paypal_order_id: str | None = None
+    status: str | None = None
+    created_at: str | None = None
+
+
+class AdminPaymentSummaryResponse(BaseModel):
+    total_payments: int
+    completed_payments: int
+    total_revenue: float
+    revenue_by_currency: dict[str, float]
+    revenue_by_plan: dict[str, float]
+
+
 # ─── CUSTOMER / ADMIN "MY PROFILE" ─────────────────────────
 
 class UserProfileResponse(BaseModel):
