@@ -342,6 +342,9 @@ async function loadProfile(){
     const contactEl = document.getElementById("profileContact");
     const dobEl = document.getElementById("profileDob");
     const roleEl = document.getElementById("profileRole");
+    const planBadgeEl = document.getElementById("profilePlanBadge");
+    const usageEl = document.getElementById("profileDomainUsage");
+    const usageBarEl = document.getElementById("profileUsageBarFill");
 
     if(nameEl) nameEl.value = data.full_name || "";
     if(emailEl) emailEl.value = data.email || "";
@@ -349,6 +352,37 @@ async function loadProfile(){
     if(contactEl) contactEl.value = data.contact_number || "";
     if(dobEl) dobEl.value = data.date_of_birth || "";
     if(roleEl) roleEl.value = data.role === "admin" ? "Administrator" : "Customer";
+
+    const planKey = (data.plan || "").toLowerCase();
+    const planLabels = {
+      individual: "INDIVIDUAL",
+      smallbusiness: "SMALL BUSINESS",
+      business: "BUSINESS",
+      enterprise: "ENTERPRISE"
+    };
+    const planBadgeClasses = {
+      individual: "info",
+      smallbusiness: "premium",
+      business: "warn",
+      enterprise: "enterprise"
+    };
+    if(planBadgeEl){
+      planBadgeEl.textContent = planLabels[planKey] || "TRIAL";
+      planBadgeEl.className = "badge " + (planBadgeClasses[planKey] || "danger");
+    }
+
+    const unlimited = data.domain_limit === null || data.domain_limit === undefined;
+    if(usageEl) usageEl.textContent = unlimited
+      ? `${data.domains_used} / Unlimited`
+      : `${data.domains_used} / ${data.domain_limit}`;
+    if(usageBarEl){
+      const pct = unlimited ? 15 : Math.min(100, (data.domains_used / Math.max(data.domain_limit, 1)) * 100);
+      usageBarEl.style.width = pct + "%";
+      usageBarEl.className = "usage-bar-fill" + (
+        !unlimited && pct >= 100 ? " usage-at-limit" :
+        !unlimited && pct >= 75 ? " usage-near-limit" : ""
+      );
+    }
   }catch(e){
     notify("Could not load your profile. Check backend connection.");
   }

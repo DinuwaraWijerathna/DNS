@@ -1,7 +1,10 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 
+from app.core.plans import get_domain_limit
+from app.core.security import get_current_user
+from app.core.supabase_client import supabase
 from app.models.schemas import (
     DomainAuditEvent,
     DomainMutationResponse,
@@ -45,9 +48,49 @@ def _service_from_request(request: Request) -> DomainService:
 def register_domain(
     payload: RegisterDomainRequest,
     request: Request,
+    current_user: dict = Depends(get_current_user),
 ) -> DomainMutationResponse:
 
     service = _service_from_request(request)
+
+    # ── PLAN ENFORCEMENT ──────────────────────────────────────────────
+    # The browser keeps one signing keypair for its whole session
+    # (see getOrCreateKeypair in shared.js), so the first public key a
+    # user ever registers a domain with is treated as "their" key for
+    # counting domain usage against their plan. We store it on their
+    # user row the first time, then reuse it on every later request so
+    # this can't be bypassed by simply sending a different public key.
+    user_result = supabase.table("users").select("plan, owner_public_key").eq(
+        "id", current_user["user_id"]
+    ).execute()
+
+    if not user_result.data:
+        raise HTTPException(status_code=404, detail="User account not found.")
+
+    user_row = user_result.data[0]
+    plan = user_row.get("plan")
+    limit = get_domain_limit(plan)
+    tracked_key = user_row.get("owner_public_key") or payload.owner_public_key
+
+    if limit is not None:
+        owned_count = sum(
+            1
+            for existing_domain in service.list_domains()
+            if existing_domain.get("owner_public_key") == tracked_key
+        )
+        if owned_count >= limit:
+            raise HTTPException(
+                status_code=403,
+                detail=(
+                    f"Your current plan ({plan or 'trial'}) allows up to {limit} "
+                    "domain(s). Upgrade your plan to register more domains."
+                ),
+            )
+
+    if not user_row.get("owner_public_key"):
+        supabase.table("users").update(
+            {"owner_public_key": payload.owner_public_key}
+        ).eq("id", current_user["user_id"]).execute()
 
     try:
         result = service.register_domain(

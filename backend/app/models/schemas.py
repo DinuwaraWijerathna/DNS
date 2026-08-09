@@ -185,6 +185,9 @@ class UserProfileResponse(BaseModel):
     date_of_birth: str | None = None
     status: str = "active"
     created_at: str | None = None
+    plan: str | None = None
+    domain_limit: int | None = None
+    domains_used: int = 0
 
 
 class UpdateProfileRequest(BaseModel):

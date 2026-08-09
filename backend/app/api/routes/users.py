@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 
+from app.core.plans import get_domain_limit
 from app.core.security import get_current_user
 from app.core.supabase_client import supabase
 from app.models.schemas import (
@@ -21,7 +22,21 @@ def _fetch_user_row(user_id: str) -> dict:
     return result.data[0]
 
 
-def _to_profile_response(user: dict) -> UserProfileResponse:
+def _count_domains_for_key(request: Request, owner_public_key: str | None) -> int:
+    if not owner_public_key:
+        return 0
+    service = getattr(request.app.state, "domain_service", None)
+    if service is None:
+        return 0
+    return sum(
+        1
+        for existing_domain in service.list_domains()
+        if existing_domain.get("owner_public_key") == owner_public_key
+    )
+
+
+def _to_profile_response(user: dict, domains_used: int = 0) -> UserProfileResponse:
+    plan = user.get("plan")
     return UserProfileResponse(
         user_id=str(user.get("id")),
         full_name=user.get("full_name") or "",
@@ -32,14 +47,21 @@ def _to_profile_response(user: dict) -> UserProfileResponse:
         date_of_birth=str(user.get("date_of_birth")) if user.get("date_of_birth") else None,
         status=user.get("status") or "active",
         created_at=str(user.get("created_at")) if user.get("created_at") else None,
+        plan=plan,
+        domain_limit=get_domain_limit(plan),
+        domains_used=domains_used,
     )
 
 
 @router.get("/me", response_model=UserProfileResponse)
-def get_my_profile(current_user: dict = Depends(get_current_user)) -> UserProfileResponse:
+def get_my_profile(
+    request: Request,
+    current_user: dict = Depends(get_current_user),
+) -> UserProfileResponse:
     """Return the logged-in customer's (or admin's) own profile details."""
     user = _fetch_user_row(current_user["user_id"])
-    return _to_profile_response(user)
+    domains_used = _count_domains_for_key(request, user.get("owner_public_key"))
+    return _to_profile_response(user, domains_used)
 
 
 @router.put("/me", response_model=UserProfileResponse)

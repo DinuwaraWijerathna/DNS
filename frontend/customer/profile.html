@@ -47,6 +47,25 @@
 
         <div class="grid">
           <div class="panel">
+            <h2>Subscription</h2>
+            <p>Your current plan and how many domains you've used against it.</p>
+
+            <div class="mini-stat-grid">
+              <div class="mini-stat">
+                <small>CURRENT PLAN</small>
+                <div class="mini-stat-value"><span class="badge info" id="profilePlanBadge">-</span></div>
+              </div>
+              <div class="mini-stat">
+                <small>DOMAINS USED</small>
+                <div class="mini-stat-value" id="profileDomainUsage">-</div>
+                <div class="usage-bar-track"><div class="usage-bar-fill" id="profileUsageBarFill" style="width:0%"></div></div>
+              </div>
+            </div>
+
+            <button class="primary" onclick="navigateTo('pricing')">Upgrade Plan</button>
+          </div>
+
+          <div class="panel">
             <h2>Account Details</h2>
             <p>Your email and account role cannot be changed here.</p>
 
