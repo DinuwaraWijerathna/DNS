@@ -13,7 +13,6 @@ const PAGE_FILES = {
   myProfile: "/customer/profile.html",
   domainRegister: "/customer/domain-register.html",
   myDomains: "/customer/my-domains.html",
-  updateDomain: "/customer/update-domain.html",
   transferDomain: "/customer/transfer-domain.html",
   domainDetails: "/admin/domain-details.html",
   auditHistory: "/admin/audit-history.html",
@@ -21,8 +20,7 @@ const PAGE_FILES = {
   resolve: "/customer/resolve.html",
   domains: "/customer/domain-registry.html",
   blockchain: "/customer/blockchain-ledger.html",
-  security: "/customer/security-simulation.html",
-  monitoring: "/customer/security-monitoring.html",
+
   adminUsers: "/admin/admin-users.html",
   domainModeration: "/admin/admin-domain-moderation.html",
   adminAuditTrail: "/admin/admin-audit-trail.html",
@@ -38,8 +36,8 @@ const FOOTER_PAGES = ["overview", "customerDashboardOverview", "adminDashboardOv
 // Pages that require authentication
 const PROTECTED_PAGES = [
   "domainRegister","myDomains","resolve","domains",
-  "blockchain","monitoring","security",
-  "updateDomain","transferDomain","domainDetails","auditHistory","systemMetrics",
+  "blockchain",
+  "transferDomain","domainDetails","auditHistory","systemMetrics",
   "customerDashboardOverview","adminDashboardOverview",
   "adminUsers","domainModeration","adminAuditTrail","adminPayments","adminActivityLog",
   "adminSupportTickets","supportTickets",
@@ -50,7 +48,7 @@ const PROTECTED_PAGES = [
 const ADMIN_ONLY_PAGES = ["adminDashboardOverview","adminUsers","domainModeration","adminAuditTrail","domainDetails","auditHistory","systemMetrics","adminPayments","adminActivityLog","adminSupportTickets"];
 
 // Pages that belong to the customer workflow only - an admin account is redirected away from these
-const CUSTOMER_ONLY_PAGES = ["customerDashboardOverview","domainRegister","myDomains","updateDomain","transferDomain","resolve","domains","blockchain","monitoring","security","supportTickets"];
+const CUSTOMER_ONLY_PAGES = ["customerDashboardOverview","domainRegister","myDomains","transferDomain","resolve","domains","blockchain","supportTickets"];
 
 // ─── SESSION ───────────────────────────────────────────────
 function saveSession(user){ localStorage.setItem("bdns_user", JSON.stringify(user)); }
@@ -155,13 +153,10 @@ function renderSidebar(role){
       <button data-page="customerDashboardOverview" onclick="navigateTo('customerDashboardOverview')">Overview</button>
       <button data-page="domainRegister"            onclick="navigateTo('domainRegister')">Register Domain</button>
       <button data-page="myDomains"                 onclick="navigateTo('myDomains')">My Domains</button>
-      <button data-page="updateDomain"              onclick="navigateTo('updateDomain')">Update IP</button>
       <button data-page="transferDomain"            onclick="navigateTo('transferDomain')">Transfer Ownership</button>
       <button data-page="resolve"                   onclick="navigateTo('resolve')">Resolve Domain</button>
       <button data-page="domains"                   onclick="navigateTo('domains')">Domain Registry</button>
       <button data-page="blockchain"                onclick="navigateTo('blockchain')">Blockchain Ledger</button>
-      <button data-page="monitoring"                onclick="navigateTo('monitoring')">Security Monitoring</button>
-      <button data-page="security"                  onclick="navigateTo('security')">Security Simulation</button>
       <button data-page="supportTickets"            onclick="navigateTo('supportTickets')">Support Tickets</button>
       <button data-page="pricing"                   onclick="navigateTo('pricing')">Upgrade Plan</button>
     `;
@@ -607,10 +602,87 @@ async function checkDomainAvailability(){
   }
 }
 
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+async function allocateAndShowIP() {
+  const domain = document.getElementById("domain").value.trim().toLowerCase();
+  const btn = document.getElementById("allocateIpBtn");
+  const progressCard = document.getElementById("allocationProgressCard");
+  const step1 = document.getElementById("progressStep1");
+  const step2 = document.getElementById("progressStep2");
+  const step3 = document.getElementById("progressStep3");
+  const allocatedCard = document.getElementById("allocatedIpCard");
+
+  if(!domain){
+    notify("Please enter a domain name first.");
+    return;
+  }
+
+  if (btn) { btn.disabled = true; btn.textContent = "Allocating..."; }
+  if (allocatedCard) allocatedCard.style.display = "none";
+  
+  // Show progress animation card
+  if (progressCard) {
+    progressCard.style.display = "block";
+    // Reset steps
+    step1.style.opacity = "1"; step1.querySelector('.dot').style.backgroundColor = "#6c63ff";
+    step2.style.opacity = "0.3"; step2.querySelector('.dot').style.backgroundColor = "#8892b0";
+    step3.style.opacity = "0.3"; step3.querySelector('.dot').style.backgroundColor = "#8892b0";
+  }
+
+  try {
+    // Step 1: Connecting (fake delay 900ms)
+    await sleep(900);
+    
+    // Move to step 2
+    if (step2) {
+      step2.style.opacity = "1";
+      step2.querySelector('.dot').style.backgroundColor = "#6c63ff";
+    }
+    // Step 2: Scanning (fake delay 1200ms)
+    await sleep(1200);
+
+    // Move to step 3
+    if (step3) {
+      step3.style.opacity = "1";
+      step3.querySelector('.dot').style.backgroundColor = "#6c63ff";
+    }
+    // Step 3: Leasing & Fetch from server (fake delay 800ms)
+    await sleep(800);
+
+    const alloc = await apiPost("/api/v1/domains/allocate-ip", { domain });
+    
+    // Store allocation for use during registration
+    window._bdnsAllocatedIP = alloc.allocated_ip;
+    window._bdnsAllocationId = alloc.allocation_id;
+
+    // Hide progress card and show allocated card
+    if (progressCard) progressCard.style.display = "none";
+
+    if (allocatedCard) {
+      allocatedCard.style.display = "block";
+      const ipDisplay = document.getElementById("allocatedIpDisplay");
+      const idDisplay = document.getElementById("allocatedIdDisplay");
+      if (ipDisplay) ipDisplay.textContent = alloc.allocated_ip;
+      if (idDisplay) idDisplay.textContent = alloc.allocation_id;
+    }
+    notify("IP address allocated: " + alloc.allocated_ip);
+    const regBtn = document.getElementById("registerDomainBtn");
+    if (regBtn) regBtn.disabled = false;
+  } catch(e) {
+    if (progressCard) progressCard.style.display = "none";
+    show("registerOutput", { error: "IP allocation failed.", detail: e.message });
+    notify("IP allocation failed: " + e.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = "Get My IP Address"; }
+  }
+}
+
 async function registerDomain(){
   const domain = document.getElementById("domain").value.trim().toLowerCase();
-  const ip     = document.getElementById("ip").value.trim();
-  if(!domain||!ip){ show("registerOutput",{error:"Please enter both domain and IP address."}); return; }
+  const ip = window._bdnsAllocatedIP;
+  if(!domain){ show("registerOutput",{error:"Please enter a domain name."}); return; }
+  if(!ip){ show("registerOutput",{error:"Please click 'Get My IP Address' first to allocate an IP."}); return; }
   try{
     const existing = await apiGet("/api/v1/domains/"+encodeURIComponent(domain));
     if(existing && existing.domain){
@@ -627,10 +699,22 @@ async function registerDomain(){
       notify(data.detail || data.error);
       return;
     }
-    show("registerOutput",{message:"Domain registered successfully with valid ECDSA signature.",transaction:data});
-    notify("Secure blockchain DNS registration completed.");
+    show("registerOutput",{
+      message:"Domain registered successfully with blockchain-verified ECDSA signature.",
+      allocated_ip: ip,
+      allocation_id: window._bdnsAllocationId,
+      transaction:data
+    });
+    notify("Secure blockchain DNS registration completed. IP: " + ip);
     addLog("DOMAIN_REGISTERED",{domain,ip});
     saveOwnedDomain({domain, ip, owner_public_key: signed.publicKey});
+    // Reset allocation state
+    window._bdnsAllocatedIP = null;
+    window._bdnsAllocationId = null;
+    const card = document.getElementById("allocatedIpCard");
+    if (card) card.style.display = "none";
+    const regBtn = document.getElementById("registerDomainBtn");
+    if (regBtn) regBtn.disabled = true;
     loadMyDomains();
     await loadDomains();
     await loadChain();

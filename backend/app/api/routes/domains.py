@@ -6,6 +6,8 @@ from app.core.plans import get_domain_limit
 from app.core.security import get_current_user
 from app.core.supabase_client import supabase
 from app.models.schemas import (
+    AllocateIPRequest,
+    AllocateIPResponse,
     DomainAuditEvent,
     DomainMutationResponse,
     DomainRecordResponse,
@@ -38,6 +40,25 @@ def _service_from_request(request: Request) -> DomainService:
         )
 
     return service
+
+
+@router.post(
+    "/allocate-ip",
+    response_model=AllocateIPResponse,
+    status_code=status.HTTP_200_OK,
+)
+def allocate_ip(
+    payload: AllocateIPRequest,
+    request: Request,
+    current_user: dict = Depends(get_current_user),
+) -> AllocateIPResponse:
+    """Allocate a unique IP address from the BDNS private pool for domain registration."""
+    service = _service_from_request(request)
+    try:
+        allocated_ip, allocation_id = service.allocate_ip(domain=payload.domain)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    return AllocateIPResponse(allocated_ip=allocated_ip, allocation_id=allocation_id)
 
 
 @router.post(

@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
+import uuid
 from app.services.global_dns_service import domain_exists_globally
 from app.blockchain.ledger import Ledger
 from app.blockchain.transaction import Transaction
@@ -94,6 +95,40 @@ class DomainService:
             signature=signature,
         )
         return self._commit_transaction(tx)
+
+    def allocate_ip(self, domain: str) -> tuple[str, str]:
+        """Allocate a unique IP from the BDNS private pool (10.x.x.x) based on the domain hash.
+        Returns (allocated_ip, allocation_id).
+        """
+        import hashlib
+        normalized_domain = domain.strip().lower()
+
+        # Collect all IPs already registered on the blockchain
+        state, _ = self._build_indexes()
+        used_ips: set[str] = set()
+        for record in state.values():
+            ip = record.get("ip", "")
+            if ip.startswith("10."):
+                used_ips.add(ip)
+
+        # Generate a stable IP by hashing the domain name.
+        # If there's a collision, we salt the domain and try again.
+        for salt_counter in range(100):
+            salt = f"-{salt_counter}" if salt_counter > 0 else ""
+            input_str = normalized_domain + salt
+            h = hashlib.sha256(input_str.encode("utf-8")).digest()
+            
+            # Map hash bytes to a 10.x.y.z range (excluding network/broadcast addresses)
+            second = 10 + (h[0] % 240)  # 10.10.y.z to 10.250.y.z
+            third = 1 + (h[1] % 254)
+            fourth = 1 + (h[2] % 254)
+            
+            candidate = f"10.{second}.{third}.{fourth}"
+            if candidate not in used_ips:
+                allocation_id = str(uuid.uuid4()).replace("-", "")[:16].upper()
+                return candidate, allocation_id
+
+        raise RuntimeError("IP address allocation collision threshold reached.")
 
     def update_domain(
         self,

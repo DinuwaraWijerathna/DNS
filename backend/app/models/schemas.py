@@ -6,6 +6,16 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 
+class AllocateIPRequest(BaseModel):
+    domain: str = Field(..., examples=["example.bd"])
+
+
+class AllocateIPResponse(BaseModel):
+    allocated_ip: str
+    allocation_id: str
+    pool: str = "BDNS-Private-10.0.0.0/8"
+
+
 class RegisterDomainRequest(BaseModel):
     domain: str = Field(..., examples=["example.bd"])
     ip: str = Field(..., examples=["203.0.113.10"])
