@@ -13,11 +13,9 @@ const PAGE_FILES = {
   myProfile: "/customer/profile.html",
   domainRegister: "/customer/domain-register.html",
   myDomains: "/customer/my-domains.html",
-  transferDomain: "/customer/transfer-domain.html",
   domainDetails: "/admin/domain-details.html",
   auditHistory: "/admin/audit-history.html",
   systemMetrics: "/admin/system-metrics.html",
-  resolve: "/customer/resolve.html",
   domains: "/customer/domain-registry.html",
   blockchain: "/customer/blockchain-ledger.html",
 
@@ -35,9 +33,9 @@ const FOOTER_PAGES = ["overview", "customerDashboardOverview", "adminDashboardOv
 
 // Pages that require authentication
 const PROTECTED_PAGES = [
-  "domainRegister","myDomains","resolve","domains",
+  "domainRegister","myDomains","domains",
   "blockchain",
-  "transferDomain","domainDetails","auditHistory","systemMetrics",
+  "domainDetails","auditHistory","systemMetrics",
   "customerDashboardOverview","adminDashboardOverview",
   "adminUsers","domainModeration","adminAuditTrail","adminPayments","adminActivityLog",
   "adminSupportTickets","supportTickets",
@@ -48,7 +46,7 @@ const PROTECTED_PAGES = [
 const ADMIN_ONLY_PAGES = ["adminDashboardOverview","adminUsers","domainModeration","adminAuditTrail","domainDetails","auditHistory","systemMetrics","adminPayments","adminActivityLog","adminSupportTickets"];
 
 // Pages that belong to the customer workflow only - an admin account is redirected away from these
-const CUSTOMER_ONLY_PAGES = ["customerDashboardOverview","domainRegister","myDomains","transferDomain","resolve","domains","blockchain","supportTickets"];
+const CUSTOMER_ONLY_PAGES = ["customerDashboardOverview","domainRegister","myDomains","domains","blockchain","supportTickets"];
 
 // ─── SESSION ───────────────────────────────────────────────
 function saveSession(user){ localStorage.setItem("bdns_user", JSON.stringify(user)); }
@@ -153,8 +151,6 @@ function renderSidebar(role){
       <button data-page="customerDashboardOverview" onclick="navigateTo('customerDashboardOverview')">Overview</button>
       <button data-page="domainRegister"            onclick="navigateTo('domainRegister')">Register Domain</button>
       <button data-page="myDomains"                 onclick="navigateTo('myDomains')">My Domains</button>
-      <button data-page="transferDomain"            onclick="navigateTo('transferDomain')">Transfer Ownership</button>
-      <button data-page="resolve"                   onclick="navigateTo('resolve')">Resolve Domain</button>
       <button data-page="domains"                   onclick="navigateTo('domains')">Domain Registry</button>
       <button data-page="blockchain"                onclick="navigateTo('blockchain')">Blockchain Ledger</button>
       <button data-page="supportTickets"            onclick="navigateTo('supportTickets')">Support Tickets</button>
@@ -1012,11 +1008,11 @@ function loadMyDomains(){
   const table = document.getElementById("myDomainTable");
   if(!table) return;
   table.innerHTML = "";
-  if(owned.length===0){ table.innerHTML=`<tr><td colspan="4">No domains registered by this customer yet.</td></tr>`; show("myDomainOutput",{message:"No domains found for current user.",user:user.email}); return; }
+  if(owned.length===0){ table.innerHTML=`<tr><td colspan="3">No domains registered by this customer yet.</td></tr>`; return; }
   owned.forEach(item=>{
-    table.innerHTML+=`<tr><td>${item.domain}</td><td>${item.ip}</td><td>${item.owner_name}</td><td><button class="primary" onclick="quickResolve('${item.domain}')">Resolve</button> <button class="primary danger" onclick="quickAttackTest('${item.domain}')">Attack Test</button></td></tr>`;
+    table.innerHTML+=`<tr><td>${item.domain}</td><td>${item.ip}</td><td>${item.owner_name}</td></tr>`;
   });
-  show("myDomainOutput",{message:"My domains loaded successfully.",user:user.email,count:owned.length});
+
 }
 
 async function quickResolve(domain){
