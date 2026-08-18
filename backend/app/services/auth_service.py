@@ -84,14 +84,19 @@ def register_user(data):
         "role": role,
         "country": country,
         "contact_number": data.get("contact_number"),
-        "date_of_birth": data.get("date_of_birth") or None
+        "date_of_birth": data.get("date_of_birth") or None,
+        "email_verified": False,
     }
 
     result = supabase.table("users") \
         .insert(insert_data) \
         .execute()
 
-    return result.data
+    if not result.data:
+        return {"error": "Failed to create account. Please try again."}
+
+    user_row = result.data[0]
+    return {"user_id": user_row["id"], "email": email, "full_name": full_name}
 
 
 def login_user(email: str, password: str):
@@ -110,8 +115,15 @@ def login_user(email: str, password: str):
     if not verify_password(password, user["password_hash"]):
         return {"error": "Invalid email or password"}
 
-    if (user.get("status") or "active") == "suspended":
+    status = user.get("status") or "active"
+
+    if status == "suspended":
         return {"error": "This account has been suspended by an administrator. Please contact support."}
+
+    email_verified = user.get("email_verified")
+    if email_verified is False or status == "pending_verification":
+        return {"error": "EMAIL_NOT_VERIFIED", "email": email}
+
 
     token = create_token(user["id"], user["role"])
 

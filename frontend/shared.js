@@ -173,7 +173,7 @@ function setButtonLoading(btn, isLoading, loadingText, normalText){
   btn.textContent = isLoading ? loadingText : normalText;
 }
 
-async function demoLogin(){
+async function loginUser(){
   const btn = document.getElementById("loginBtn");
   const email = document.getElementById("loginEmail").value.trim();
   const password = document.getElementById("loginPassword").value;
@@ -193,6 +193,14 @@ async function demoLogin(){
     const data = await apiPost("/api/v1/auth/login", { email, password });
 
     if(data.error){
+      if(data.error === "EMAIL_NOT_VERIFIED"){
+        window._bdnsOtpEmail = data.email || email;
+        window._bdnsOtpName = "";
+        notify("⚠️ Your email is not verified. Check your inbox for the OTP code.");
+        navigateTo("registerUser");
+        setTimeout(() => showOtpOverlay(data.email || email), 300);
+        return;
+      }
       notify(data.error);
       return;
     }
@@ -246,7 +254,7 @@ function setRegisterRole(role){
   if(authGlass) authGlass.classList.toggle("admin-theme", isAdmin);
 }
 
-async function demoRegisterUser(role){
+async function registerUser(role){
   role = role === "admin" ? "admin" : "customer";
   const prefix = role === "admin" ? "admin" : "customer";
   const btn = document.getElementById(role === "admin" ? "registerAdminBtn" : "registerBtn");
@@ -299,7 +307,16 @@ async function demoRegisterUser(role){
       return;
     }
 
-    notify(role === "admin" ? "Admin account created successfully. Please login." : "Account created successfully. Please login.");
+    // Registration success - show OTP verification overlay
+    if(data.status === "pending_verification"){
+      window._bdnsOtpEmail = data.email || email;
+      window._bdnsOtpName = name;
+      showOtpOverlay(data.email || email);
+      notify("Check your email for the verification code!");
+      return;
+    }
+
+    notify("Account created successfully. Please login.");
     navigateTo("login");
 
   }catch(e){
@@ -308,6 +325,113 @@ async function demoRegisterUser(role){
     setButtonLoading(btn, false, "Creating account...", normalText);
   }
 }
+
+// ─── OTP OVERLAY HELPERS ───────────────────────────────────────
+function showOtpOverlay(email){
+  const overlay = document.getElementById("otpVerifyOverlay");
+  if(!overlay) return;
+  overlay.style.display = "flex";
+  const emailEl = document.getElementById("otpEmailDisplay");
+  if(emailEl) emailEl.textContent = email;
+  // Clear inputs
+  ["otpInput1","otpInput2","otpInput3","otpInput4","otpInput5","otpInput6"].forEach(id => {
+    const el = document.getElementById(id);
+    if(el){ el.value = ""; el.style.borderColor = "rgba(108,99,255,0.3)"; }
+  });
+  const first = document.getElementById("otpInput1");
+  if(first) setTimeout(() => first.focus(), 100);
+}
+
+function cancelOtpVerification(){
+  const overlay = document.getElementById("otpVerifyOverlay");
+  if(overlay) overlay.style.display = "none";
+}
+
+function otpAutoTab(current, nextId){
+  if(current.value.length === 1 && nextId){
+    const next = document.getElementById(nextId);
+    if(next) next.focus();
+  }
+  // Only allow digits
+  current.value = current.value.replace(/[^0-9]/g, "");
+}
+
+function otpBackspace(event, current, prevId){
+  if(event.key === "Backspace" && !current.value && prevId){
+    const prev = document.getElementById(prevId);
+    if(prev){ prev.focus(); prev.value = ""; }
+  }
+}
+
+async function submitOtpVerification(){
+  const otp = ["otpInput1","otpInput2","otpInput3","otpInput4","otpInput5","otpInput6"]
+    .map(id => { const el = document.getElementById(id); return el ? el.value : ""; })
+    .join("");
+
+  if(otp.length < 6){
+    notify("Please enter the complete 6-digit code.");
+    return;
+  }
+
+  const email = window._bdnsOtpEmail;
+  if(!email){ notify("Session error. Please re-register."); return; }
+
+  const btn = document.getElementById("verifyOtpBtn");
+  setButtonLoading(btn, true, "Verifying...", "Verify & Activate Account");
+  try{
+    const data = await apiPost("/api/v1/auth/verify-otp", { email, otp });
+    if(data.error){
+      notify(data.error);
+      // Flash red on inputs
+      ["otpInput1","otpInput2","otpInput3","otpInput4","otpInput5","otpInput6"].forEach(id => {
+        const el = document.getElementById(id);
+        if(el) el.style.borderColor = "#ef4444";
+      });
+      return;
+    }
+    notify("✅ Email verified! You can now login.");
+    cancelOtpVerification();
+    navigateTo("login");
+  }catch(e){
+    notify("Verification failed. Please try again.");
+  }finally{
+    setButtonLoading(btn, false, "Verifying...", "Verify & Activate Account");
+  }
+}
+
+let _resendCooldown = null;
+async function resendOtp(){
+  const email = window._bdnsOtpEmail;
+  const name  = window._bdnsOtpName || "User";
+  if(!email){ notify("Session error. Please re-register."); return; }
+
+  const btn = document.getElementById("resendOtpBtn");
+  const countdown = document.getElementById("resendCountdown");
+  if(btn) btn.style.display = "none";
+  if(countdown){ countdown.style.display = "inline"; countdown.textContent = "(wait 30s)"; }
+
+  try{
+    const data = await apiPost("/api/v1/auth/send-otp", { email, full_name: name });
+    if(data.error){ notify(data.error); }
+    else { notify("New OTP sent to your email."); }
+  }catch(e){
+    notify("Failed to resend OTP.");
+  }
+
+  // 30s cooldown
+  let secs = 30;
+  _resendCooldown = setInterval(() => {
+    secs--;
+    if(countdown) countdown.textContent = `(wait ${secs}s)`;
+    if(secs <= 0){
+      clearInterval(_resendCooldown);
+      if(btn) btn.style.display = "inline";
+      if(countdown){ countdown.style.display = "none"; countdown.textContent = ""; }
+    }
+  }, 1000);
+}
+
+
 
 function logout(){
   clearSession();

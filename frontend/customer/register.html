@@ -117,7 +117,7 @@
               <div></div>
             </div>
 
-            <button id="registerBtn" class="primary auth-full-btn-light role-customer" onclick="demoRegisterUser('customer')">Create Customer Account →</button>
+            <button id="registerBtn" class="primary auth-full-btn-light role-customer" onclick="registerUser('customer')">Create Customer Account →</button>
           </div>
 
           <!-- ── ADMIN PANEL ── -->
@@ -171,13 +171,49 @@
               Admin accounts require a private invite code issued by your organization. Contact your system administrator if you don't have one.
             </div>
 
-            <button id="registerAdminBtn" class="primary auth-full-btn-light role-admin" onclick="demoRegisterUser('admin')">Create Admin Account →</button>
+            <button id="registerAdminBtn" class="primary auth-full-btn-light role-admin" onclick="registerUser('admin')">Create Admin Account →</button>
           </div>
 
           <div class="auth-switch-light">
             Already have an account?
             <span onclick="navigateTo('login')">Sign in</span>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── OTP VERIFICATION PANEL ── -->
+    <div id="otpVerifyOverlay" style="display:none;position:fixed;inset:0;background:rgba(5,10,30,0.92);z-index:999;display:none;align-items:center;justify-content:center;">
+      <div style="background:#0d1b3e;border:1px solid rgba(108,99,255,0.35);border-radius:20px;padding:40px 36px;max-width:440px;width:90%;box-shadow:0 24px 64px rgba(0,0,0,0.5);">
+        <div style="text-align:center;margin-bottom:28px;">
+          <div style="font-size:2.5rem;margin-bottom:12px;">📧</div>
+          <h2 style="color:#ccd6f6;margin:0 0 8px;font-size:1.4rem;">Verify Your Email</h2>
+          <p style="color:#8892b0;font-size:0.9rem;margin:0;">We sent a 6-digit code to</p>
+          <p id="otpEmailDisplay" style="color:#6c63ff;font-weight:700;font-size:0.95rem;margin:4px 0 0;"></p>
+        </div>
+
+        <div style="margin-bottom:20px;">
+          <label style="display:block;font-size:0.8rem;text-transform:uppercase;letter-spacing:0.08em;color:#8892b0;margin-bottom:10px;">Verification Code</label>
+          <div style="display:flex;gap:10px;justify-content:center;">
+            <input id="otpInput1" maxlength="1" style="width:48px;height:56px;text-align:center;font-size:1.5rem;font-weight:700;font-family:monospace;background:#0a0f1e;border:2px solid rgba(108,99,255,0.3);border-radius:10px;color:#00d4aa;outline:none;" oninput="otpAutoTab(this,'otpInput2')" onkeydown="otpBackspace(event,this,null)">
+            <input id="otpInput2" maxlength="1" style="width:48px;height:56px;text-align:center;font-size:1.5rem;font-weight:700;font-family:monospace;background:#0a0f1e;border:2px solid rgba(108,99,255,0.3);border-radius:10px;color:#00d4aa;outline:none;" oninput="otpAutoTab(this,'otpInput3')" onkeydown="otpBackspace(event,this,'otpInput1')">
+            <input id="otpInput3" maxlength="1" style="width:48px;height:56px;text-align:center;font-size:1.5rem;font-weight:700;font-family:monospace;background:#0a0f1e;border:2px solid rgba(108,99,255,0.3);border-radius:10px;color:#00d4aa;outline:none;" oninput="otpAutoTab(this,'otpInput4')" onkeydown="otpBackspace(event,this,'otpInput2')">
+            <input id="otpInput4" maxlength="1" style="width:48px;height:56px;text-align:center;font-size:1.5rem;font-weight:700;font-family:monospace;background:#0a0f1e;border:2px solid rgba(108,99,255,0.3);border-radius:10px;color:#00d4aa;outline:none;" oninput="otpAutoTab(this,'otpInput5')" onkeydown="otpBackspace(event,this,'otpInput3')">
+            <input id="otpInput5" maxlength="1" style="width:48px;height:56px;text-align:center;font-size:1.5rem;font-weight:700;font-family:monospace;background:#0a0f1e;border:2px solid rgba(108,99,255,0.3);border-radius:10px;color:#00d4aa;outline:none;" oninput="otpAutoTab(this,'otpInput6')" onkeydown="otpBackspace(event,this,'otpInput4')">
+            <input id="otpInput6" maxlength="1" style="width:48px;height:56px;text-align:center;font-size:1.5rem;font-weight:700;font-family:monospace;background:#0a0f1e;border:2px solid rgba(108,99,255,0.3);border-radius:10px;color:#00d4aa;outline:none;" oninput="otpAutoTab(this,null)" onkeydown="otpBackspace(event,this,'otpInput5')">
+          </div>
+        </div>
+
+        <button id="verifyOtpBtn" class="primary" style="width:100%;padding:14px;font-size:1rem;font-weight:700;border-radius:10px;margin-bottom:16px;" onclick="submitOtpVerification()">Verify & Activate Account</button>
+
+        <div style="text-align:center;font-size:0.85rem;color:#8892b0;">
+          Didn't receive the code?
+          <span id="resendOtpBtn" onclick="resendOtp()" style="color:#6c63ff;cursor:pointer;font-weight:600;margin-left:4px;">Resend OTP</span>
+          <span id="resendCountdown" style="color:#4a5568;display:none;margin-left:4px;"></span>
+        </div>
+
+        <div style="text-align:center;margin-top:14px;">
+          <span onclick="cancelOtpVerification()" style="color:#4a5568;font-size:0.8rem;cursor:pointer;">← Back to registration</span>
         </div>
       </div>
     </div>
